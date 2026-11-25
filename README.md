@@ -48,7 +48,7 @@ pnpm play 04-01    # เหมือนกัน
 | 5 | 17 | Agent Middleware & Human-in-the-Loop | ✅ |
 | 5 | 18 | Testing, Debugging & Evaluation | ✅ |
 | 5 | 19 | Backend Integration (NestJS) | ✅ |
-| 6 | 20 | Capstone: AI Personal Task Manager | Phase 3 |
+| 6 | 20 | Capstone: AI Personal Task Manager | ✅ |
 
 > หมายเหตุ: ทดสอบบน macOS/Linux เท่านั้น — `pnpm play` ยังไม่รองรับ Windows (ใช้ WSL)
 
@@ -68,9 +68,20 @@ pnpm db:down             # หยุด (ข้อมูลอยู่ใน vo
 - `pnpm test` ไม่ส่ง trace เลย
 - Part 19–20 ใช้ `apps/task-api` (NestJS + Prisma): ตั้ง `TASK_API_DATABASE_URL`, `JWT_SECRET` ใน `.env` แล้ว `pnpm db:up && pnpm --filter task-api db:create && pnpm --filter task-api migrate` ดู [`apps/task-api/README.md`](apps/task-api/README.md)
 
+### รัน Capstone (Part 19–20)
+
+```bash
+pnpm db:up && pnpm --filter task-api db:create && pnpm --filter task-api migrate
+pnpm app:api     # NestJS API  (PORT=3000; ชนพอร์ตให้ตั้ง PORT=3010)
+pnpm app:web     # Next.js http://localhost:3001  (NEXT_PUBLIC_API_URL ชี้ไปที่ API)
+```
+`.env` ต้องมี `TASK_API_DATABASE_URL`, `JWT_SECRET`, key ของ model (`GROQ_API_KEY` หรือ `DEEPSEEK_API_KEY` + `AI_PROVIDER`) และ `GOOGLE_API_KEY` สำหรับ embeddings — ดูเนื้อหาและ checklist ที่ [`parts/20-capstone`](parts/20-capstone/README.md), สรุปผลที่ [`docs/phase-3-report.md`](docs/phase-3-report.md)
+
 ## คำสั่งสำหรับ repo
 
 ```bash
 pnpm typecheck   # ตรวจ type ทั้ง repo
-pnpm test        # รัน test
+pnpm test        # รัน test (root)
+pnpm app:api:test   # spec ของ task-api (ต้องมี DB)
+pnpm app:web:test   # test ของ task-web
 ```

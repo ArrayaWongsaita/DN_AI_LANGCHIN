@@ -217,6 +217,23 @@ env: `LANGSMITH_API_KEY` · `LANGSMITH_TRACING=true|false` · `LANGSMITH_PROJECT
 | Prisma 7 | `new PrismaClient({ adapter: new PrismaPg({ connectionString }) })`; URL ใน `prisma.config.ts`; CLI ผ่าน `node --env-file` |
 | error → HTTP | provider 429 / `tool_use_failed` → 503, timeout → 504, อื่นๆ → 500 ข้อความไทยกลาง ไม่ส่ง `err.message` |
 
+## Capstone (Part 20 — apps/task-api + apps/task-web)
+
+```bash
+pnpm app:api / pnpm app:web            # เริ่ม API / เว็บ
+pnpm --filter task-api test            # 93 spec (DB จริง + model ปลอม)
+pnpm --filter task-web test            # 25 test (SSE parser, reducer, dialog, api client)
+git tag -l 'milestone-*'               # 13 milestone
+```
+| เรื่อง | จำ |
+|---|---|
+| ตัวตน | JWT มีแค่ `sub`; role/locale อ่านจาก DB; tool schema ไม่มี `userId` |
+| RAG | chunk 500/50, ทิ้ง <20 ตัว, `embedding <=> $1::vector`, ตัดที่ distance ≤ 0.35, ไม่เจอ = NOT_FOUND ไม่เรียก LLM |
+| HITL | ค้างอนุมัติ = 409 กับข้อความใหม่; stale approval ปิด thread ด้วย reject |
+| SSE (web) | `TextDecoder({stream:true})` กันอักษรไทยแตก; abort = ปุ่มหยุด |
+| Eval | ชุดต้อง *ตก* กับ agent ถดถอย (`regressedRunner`) ไม่ใช่แค่ผ่านกับของดี |
+| ขึ้น prod | `migrate deploy`; MemorySaver/Store/rate limit อยู่ใน RAM = instance เดียว; `NEXT_PUBLIC_*` เปิดเผยในเบราว์เซอร์ |
+
 ## Docker / PostgreSQL / Gemini setup (Phase 2)
 ```bash
 docker compose up -d --wait        # pgvector/pgvector:0.8.0-pg17 พอร์ต 5435 (pnpm db:up)

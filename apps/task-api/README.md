@@ -9,7 +9,7 @@ pnpm db:up                            # PostgreSQL + pgvector (Docker)
 pnpm --filter task-api db:create      # สร้างฐานข้อมูล task_api (ครั้งแรก)
 pnpm --filter task-api migrate        # สร้างตารางด้วย Prisma migration
 pnpm --filter task-api test           # spec ทั้งหมด (ใช้ฐานข้อมูลจริง + model ปลอม ไม่เรียก API)
-pnpm --filter task-api start          # เริ่มเซิร์ฟเวอร์ (PORT=3000)
+pnpm --filter task-api start          # เริ่มเซิร์ฟเวอร์ (PORT=3000 (ชนพอร์ตให้ตั้ง PORT เอง))
 ```
 env ที่ใช้ (ใน `.env` ของ root): `TASK_API_DATABASE_URL`, `JWT_SECRET`, `GROQ_API_KEY` / `DEEPSEEK_API_KEY` (`AI_PROVIDER=groq|deepseek`)
 ไม่มีฐานข้อมูล → spec ที่ใช้ DB ถูก **ข้าม** พร้อมข้อความบอกวิธีแก้
@@ -22,7 +22,7 @@ src/
 ├── tasks/         schemas (zod) · repository · service (กฎธุรกิจ)         19-05, 19-06
 ├── ai/            model.provider · task-tools (adapter) · agent.service
 │                  · chat.controller · ai.module                           19-01 … 19-04
-├── common/        guard ชั่วคราว (dev user) — จะถูกแทนด้วย JWT ใน 19-07
+├── common/        rate limit, exception filter, zod helper
 ├── shared/        โค้ดที่ copy มาจาก root `src/` (แอปนี้พึ่งตัวเองได้)
 └── generated/     Prisma client (ไม่ commit — สร้างจาก `pnpm generate`)
 ```
@@ -56,3 +56,10 @@ src/
 | 19-15 | Usage logging | `usage/` | `part-19-15` |
 
 env เพิ่ม: `AI_PROVIDER` · `MCP_ENABLED=true` (เปิด MCP tools) · `RATE_LIMIT_PER_MIN` (ค่าเริ่มต้น 20)
+
+
+## Part 20 (capstone) เพิ่มเติม
+- `src/knowledge/` — อัปโหลด/ค้นเอกสาร (pgvector), `GET/POST /documents`, `DELETE /documents/:id`
+- `eval/suite.ts` — ชุดประเมิน AI แบบ offline (`test/eval-suite.spec.ts`)
+- `Dockerfile` — build จาก root: `docker build -f apps/task-api/Dockerfile -t task-api .`
+- env เพิ่ม: `WEB_ORIGIN` (CORS), `GOOGLE_API_KEY` (embeddings)
