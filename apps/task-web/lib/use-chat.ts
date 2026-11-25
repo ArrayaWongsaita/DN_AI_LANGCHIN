@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useReducer, useRef } from "react";
 import { ApiError } from "./api";
+import { submitDecision } from "./approval";
 import { chatReducer, initialChatState, type ServerMessage } from "./chat-reducer";
 import { API_URL, useSession } from "./session";
 import { streamChat } from "./sse";
@@ -69,7 +70,7 @@ export function useChat(conversationId: string) {
   const decide = useCallback(
     async (decision: "approve" | "reject") => {
       if (!state.approval) return;
-      const res = await api.post<{ reply: string }>(`/conversations/${conversationId}/approvals/${state.approval.id}`, { decision });
+      const res = await submitDecision(api, conversationId, state.approval.id, decision);
       dispatch({ type: "approval_resolved", reply: res.reply });
     },
     [api, conversationId, state.approval],
