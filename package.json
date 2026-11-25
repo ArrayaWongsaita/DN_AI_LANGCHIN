@@ -9,7 +9,9 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "db:up": "docker compose up -d --wait",
-    "db:down": "docker compose down"
+    "db:down": "docker compose down",
+    "app:api": "pnpm --filter task-api start",
+    "app:api:test": "pnpm --filter task-api test"
   },
   "devDependencies": {
     "@types/node": "26.6.6",
