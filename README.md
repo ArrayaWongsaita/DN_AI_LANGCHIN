@@ -42,7 +42,7 @@ pnpm play 04-01    # เหมือนกัน
 | 2 | 05 | Prompt Engineering & Prompt Templates | ✅ |
 | 2 | 06 | Structured Output & Zod Schema | ✅ |
 | 2 | 07 | Runnables & LCEL | ✅ |
-| 2 | 08 | Streaming, Batch & Concurrency | รอทำ |
+| 2 | 08 | Streaming, Batch & Concurrency | ✅ |
 | 3 | 09–12 | Tools, Agent Loop, createAgent, Memory | Phase 2 |
 | 4 | 13–16 | Documents, Embeddings, Vector Stores, RAG | Phase 2 |
 | 5 | 17–19 | Middleware & HITL, Testing, Backend | Phase 3 |
