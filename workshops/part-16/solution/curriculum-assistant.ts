@@ -23,11 +23,11 @@ if (isMain(import.meta.url)) {
         console.log(`index เสร็จ: ${r.chunks} chunk | ส่งไป embed รอบนี้: ${r.embedded}${r.warnings.length ? ` | warnings: ${r.warnings.join("; ")}` : ""}`);
       } else if (command === "ask") {
         const question = rest.join(" ").trim();
-        if (!question) throw new Error('ใช้: curriculum-assistant.ts ask "คำถาม" [--provider groq|deepseek]');
+        if (!question) throw new Error('ใช้: curriculum-assistant.ts ask "คำถาม" [--provider tokenme|groq|deepseek]');
         await retryAsync(() => indexCurriculum({ embeddings: docEmbeddings, pool }), { delayMs: 15000 }); // ครั้งแรกเท่านั้นที่ embed
         const store = await createPgVectorStore({ embeddings: docEmbeddings, tableName: CURRICULUM_TABLE, pool });
         const retriever = createCurriculumRetriever(store, { queryEmbeddings: createEmbeddings("RETRIEVAL_QUERY") });
-        const provider = values.provider === "deepseek" ? "deepseek" : "groq";
+        const provider = values.provider === "deepseek" || values.provider === "groq" ? values.provider : "tokenme";
         const model = await createChatModel({ provider, maxTokens: 1500, ...(provider === "deepseek" ? { thinking: false } : {}) });
         const r = await retryAsync(() => answerWithRag({ question, retriever, model }));
         console.log(`คำถาม: ${question}\nคำตอบ: ${r.answer}`);

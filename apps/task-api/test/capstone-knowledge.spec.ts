@@ -153,4 +153,22 @@ describe.skipIf(!hasDb)("milestone 09 — knowledge base + RAG", () => {
       expect(await ctx.prisma.task.count({ where: { id: theirs.id } })).toBe(1);
     });
   });
+
+  describe("embedding provider returns empty vectors (e.g. free-tier quota exhausted)", () => {
+    test("upload → 503 with a clear message, no document row left behind; search → 503", async () => {
+      const svc = knowledge as unknown as { embeddings: unknown };
+      const original = svc.embeddings;
+      svc.embeddings = { embedDocuments: async (t: string[]) => t.map(() => []), embedQuery: async () => [] };
+      try {
+        const before = await ctx.prisma.knowledgeDocument.count({ where: { userId: a.id } });
+        const res = await api().post("/documents", { title: "โควตาเต็ม", filename: "q.md", content: NOTES });
+        expect(res.status).toBe(503);
+        expect(res.body.message).toMatch(/embedding/);
+        expect(await ctx.prisma.knowledgeDocument.count({ where: { userId: a.id } })).toBe(before);
+        await expect(knowledge.search(a.id, "deploy")).rejects.toMatchObject({ status: 503 });
+      } finally {
+        svc.embeddings = original;
+      }
+    });
+  });
 });

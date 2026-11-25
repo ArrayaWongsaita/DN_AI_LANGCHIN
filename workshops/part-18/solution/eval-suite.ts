@@ -138,7 +138,7 @@ async function main() {
     process.exit(report.pass === report.total ? 0 : 1);
   }
 
-  const provider = (values.provider as "groq" | "deepseek" | undefined) ?? "groq";
+  const provider = (values.provider as "tokenme" | "groq" | "deepseek" | undefined) ?? "tokenme";
   const model = await createChatModel({ provider, maxTokens: 1500, ...(provider === "deepseek" ? { thinking: false } : {}) });
   const runner = createLiveRunner(model);
 

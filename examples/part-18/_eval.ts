@@ -42,9 +42,9 @@ export function createAgentRunner(model: BaseChatModel, opts: { systemPrompt?: s
   };
 }
 
-/** model ของ agent ที่ถูกตรวจ — ค่าเริ่มต้น Groq; ตั้ง EVAL_PROVIDER=deepseek ได้ (เช่นตอนโควตา Groq รายวัน 200,000 token หมด) */
+/** model ของ agent ที่ถูกตรวจ — ค่าเริ่มต้น TokenMe; ตั้ง EVAL_PROVIDER=deepseek ได้ (เช่นตอนโควตา Groq รายวัน 200,000 token หมด) */
 export async function createEvalModel(): Promise<BaseChatModel> {
-  const provider = (process.env.EVAL_PROVIDER as ProviderName | undefined) ?? "groq";
+  const provider = (process.env.EVAL_PROVIDER as ProviderName | undefined) ?? "tokenme";
   return createChatModel({ provider, maxTokens: 1500, ...(provider === "deepseek" ? { thinking: false } : {}) });
 }
 

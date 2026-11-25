@@ -4,7 +4,7 @@ import { createChatModel } from "../../src/models/index.js";
 import { messageText } from "../../src/utils/text.js";
 
 const prompt = "อธิบาย Recursion ให้เด็กอายุ 10 ขวบเข้าใจ ใน 2 ประโยค";
-const models = ["openai/gpt-oss-20b", "openai/gpt-oss-120b"];
+const models = ["deepseek-ai/deepseek-v4.1-flash-1017", "unsloth/qwen3.8-27b-nvfp4"]; // ชื่อโมเดลที่ TokenMe เปิดให้ใช้
 
 for (const name of models) {
   const model = await createChatModel({ model: name, maxTokens: 1500 });

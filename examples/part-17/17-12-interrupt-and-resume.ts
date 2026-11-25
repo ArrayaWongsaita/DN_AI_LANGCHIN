@@ -13,12 +13,14 @@ import { contextSchema, newStore, somchai } from "./_shared.js";
 const thread = { configurable: { thread_id: `approval-${Date.now()}` }, context: somchai("admin"), recursionLimit: 10 };
 const model = await createChatModel({ maxTokens: 1500 });
 const build = (checkpointer: Parameters<typeof createAgent>[0]["checkpointer"], store = newStore()) =>
-  createAgent({ model, tools: createTaskTools(store), contextSchema, checkpointer, middleware: createApprovalMiddleware({ requireFor: ["deleteTask"] }) });
+  createAgent({ model, tools: createTaskTools(store), contextSchema, systemPrompt: "เมื่อผู้ใช้สั่งลบงาน ให้เรียก deleteTask ทันที ระบบจะหยุดขออนุมัติจากมนุษย์เอง ห้ามถามยืนยันซ้ำเป็นข้อความ", checkpointer, middleware: createApprovalMiddleware({ requireFor: ["deleteTask"] }) });
 
 console.log("--- โปรเซสที่ 1: ขอลบ แล้วหยุดรอ ---");
 await withPostgresMemory(async ({ checkpointer }) => {
   const r = await retryAsync(() => build(checkpointer).invoke({ messages: [{ role: "user", content: "ลบงาน t3 ให้หน่อย" }] }, thread));
-  console.log("หยุดรออนุมัติ:", JSON.stringify((r.__interrupt__?.[0]?.value as { actionRequests: unknown[] }).actionRequests));
+  const pending = r.__interrupt__?.[0]?.value as { actionRequests: unknown[] } | undefined;
+  if (!pending) throw new Error("โมเดลไม่ได้เรียก deleteTask จึงไม่มีการหยุดรออนุมัติ — ลองรันใหม่");
+  console.log("หยุดรออนุมัติ:", JSON.stringify(pending.actionRequests));
   console.log("ปิดทุก connection (จำลองว่าปิดโปรแกรมไปแล้ว)");
 });
 
