@@ -46,6 +46,19 @@ Each fix was written test-first; the failing run was observed before the change 
   agent fails the new case. Suite is now 13 cases (real 13/13, regressed 7/13).
 - **Docker images:** both rebuilt from this branch (`task-api` 905 MB, `task-web` 965 MB — size unchanged, not reduced). The API image was started against the local Postgres and answered requests (new Thai 404 message seen). The web image was built but not started.
 
+## Follow-up round (`complete-remaining`)
+
+- **Postgres checkpointer** — done (see item 2 above). New dependency `@langchain/langgraph-checkpoint-postgres@1.1.4` in task-api; `CHECKPOINTER=memory` keeps the old behaviour.
+- **Sample outputs** — Parts 04–11, 16–18 re-recorded from real TokenMe runs of every example (96 blocks replaced; long outputs cut at 27 lines). Parts 19–20 re-recorded from `smoke.sh`, `capstone-demo.sh` and a live `POST /chat`.
+  Stale prose found on the way: Part 20 claimed model text is rendered as plain text (it renders `**bold**`/`code` since the RichText change) — fixed.
+- **Production web image** — built with `NEXT_PUBLIC_API_URL`, run as a container next to the API image (default Postgres checkpointer), full golden path in a real browser:
+  Chrome desktop ✓, Chrome phone viewport (390×844, touch) ✓, WebKit ✓ (one `pageerror` about an `_rsc` prefetch "access control checks"; Chrome shows none, flow unaffected, not investigated further).
+  **Firefox could not be started** in this environment (`Could not find profile folder`), so it is untested.
+- **Phone layout bug found and fixed** — `/settings` overflowed horizontally (439 px page in a 390 px viewport) because of fixed-width inputs; fixed, re-measured: every page fits at 390 and 360 px, also with a long preference key/value.
+- **Starters** — all 20 starter files run without crashing (exit 0). That does not show that a learner can complete them; nobody has tried.
+- **Token numbers** — Part 20 re-measured: first turn of a new thread ≈ 3.8k input tokens (3,773 / 3,796).
+- **Summary quality** — one sample of each of the 9 scenarios read by eye (`--dump`); findings in `docs/summary-prompt-tuning.md`.
+
 ## Still unproven
 
-Mobile/other browsers, `next start` in a browser, starters tried by real learners, summary quality beyond the rule checks.
+Firefox; real learners working through the starters; summary quality beyond one human read of 9 samples; a long-running production deployment (multi-instance: lock, rate limiter and preferences store are still in-process).
