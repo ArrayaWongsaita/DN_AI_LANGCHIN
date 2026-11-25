@@ -1,8 +1,8 @@
-/** error ชั่วคราวที่ลองใหม่ได้: Groq gpt-oss ทำชื่อ tool เพี้ยน (tool_use_failed) หรือ structured output parse ไม่ได้ (output_parse_failed), 429, 5xx */
+/** error ชั่วคราวที่ลองใหม่ได้: Groq gpt-oss ทำชื่อ tool เพี้ยน (tool_use_failed), structured output parse ไม่ได้ (output_parse_failed), embedding ตอบว่าง/ไม่ครบ, 429, 5xx */
 export function isTransientModelError(err: unknown): boolean {
   const e = err as { status?: number; message?: string };
   if (e.status === 429 || (e.status !== undefined && e.status >= 500)) return true;
-  return /tool_use_failed|output_parse_failed|<\|channel\|>/.test(e.message ?? "");
+  return /tool_use_failed|output_parse_failed|embedding ของ|<\|channel\|>/.test(e.message ?? "");
 }
 
 /** ลองใหม่เมื่อเจอ error ชั่วคราว (เว้นช่วงเพิ่มเป็นเท่าตัว); error อื่นโยนทันที */

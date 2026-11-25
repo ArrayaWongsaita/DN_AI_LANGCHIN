@@ -5,6 +5,7 @@ describe("isTransientModelError", () => {
   test("recognises Groq gpt-oss malformed tool call, 429 and 5xx", () => {
     expect(isTransientModelError(new Error("400 Tool call validation failed ... tool_use_failed"))).toBe(true);
     expect(isTransientModelError(new Error('400 {"code":"output_parse_failed"}'))).toBe(true);
+    expect(isTransientModelError(new Error("embedding ของ query ว่างเปล่า (provider ตอบผิดปกติ)"))).toBe(true);
     expect(isTransientModelError(Object.assign(new Error("x"), { status: 429 }))).toBe(true);
     expect(isTransientModelError(Object.assign(new Error("x"), { status: 503 }))).toBe(true);
   });
