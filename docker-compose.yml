@@ -1,0 +1,21 @@
+# PostgreSQL + pgvector สำหรับ Part 12 และ 15–16
+# เริ่ม: docker compose up -d   หยุด: docker compose down   (ลบข้อมูลด้วย: docker compose down -v)
+services:
+  postgres:
+    image: pgvector/pgvector:0.8.0-pg17
+    container_name: langchain-course-postgres
+    environment:
+      POSTGRES_USER: langchain
+      POSTGRES_PASSWORD: langchain
+      POSTGRES_DB: langchain_course
+    ports:
+      - "${POSTGRES_PORT:-5435}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U langchain -d langchain_course"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+volumes:
+  pgdata:

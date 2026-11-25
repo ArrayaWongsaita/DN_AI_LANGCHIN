@@ -50,6 +50,16 @@ pnpm play 04-01    # เหมือนกัน
 
 > หมายเหตุ: ทดสอบบน macOS/Linux เท่านั้น — `pnpm play` ยังไม่รองรับ Windows (ใช้ WSL)
 
+## ตั้งค่าเพิ่มสำหรับ Phase 2 (Part 12–16)
+
+```bash
+cp .env.example .env     # ใส่ GROQ_API_KEY / DEEPSEEK_API_KEY / GOOGLE_API_KEY (embeddings) และ DATABASE_URL
+pnpm db:up               # docker compose up -d --wait  (PostgreSQL 17 + pgvector, พอร์ต 5435)
+pnpm db:down             # หยุด (ข้อมูลอยู่ใน volume; ลบด้วย docker compose down -v)
+```
+
+พอร์ตเริ่มต้นคือ **5435** (เลี่ยงชนกับ Postgres ตัวอื่นในเครื่อง) เปลี่ยนได้ด้วย `POSTGRES_PORT` และแก้ `DATABASE_URL` ให้ตรงกัน
+
 ## คำสั่งสำหรับ repo
 
 ```bash
