@@ -8,6 +8,7 @@ import { createAgent, modelCallLimitMiddleware, modelFallbackMiddleware, modelRe
 import { MCP_TOOLS, type McpToolsFactory } from "../mcp/mcp-tools.js";
 import { isTransientModelError } from "../shared/retry.js";
 import { messageText } from "../shared/text.js";
+import { KnowledgeService } from "../knowledge/knowledge.service.js";
 import { TasksService } from "../tasks/tasks.service.js";
 import { createToolErrorMiddleware } from "./tool-errors.middleware.js";
 import { createApprovalMiddleware, type ApprovalDecision } from "./approval.middleware.js";
@@ -82,6 +83,7 @@ export class AgentService {
   constructor(
     @Inject(CHAT_MODEL) private model: BaseChatModel,
     @Inject(TasksService) private readonly tasks: TasksService,
+    @Inject(KnowledgeService) private readonly knowledge: KnowledgeService,
     @Inject(MCP_TOOLS) private readonly mcp: McpToolsFactory | null,
     @Inject(STORE) private readonly store: BaseStore,
     @Inject(FALLBACK_MODEL) private fallbackModel: BaseChatModel | null,
@@ -135,7 +137,7 @@ export class AgentService {
   private build(extraTools: StructuredToolInterface[] = []) {
     return createAgent({
       model: this.model,
-      tools: [...createTaskTools(this.tasks), ...extraTools],
+      tools: [...createTaskTools(this.tasks, this.knowledge), ...extraTools],
       contextSchema: runtimeContextSchema,
       checkpointer: this.checkpointer,
       store: this.store,

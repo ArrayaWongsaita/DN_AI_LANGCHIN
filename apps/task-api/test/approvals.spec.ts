@@ -7,23 +7,24 @@ describe.skipIf(!hasDb)("19-11 approval endpoint (human-in-the-loop)", () => {
   let ctx: Awaited<ReturnType<typeof makeApp>>;
   let a: Awaited<ReturnType<typeof registerUser>>;
   let b: Awaited<ReturnType<typeof registerUser>>;
-  let conv: string;
 
   const newConv = async (u = a) => (await request(ctx.http()).post("/conversations").set(bearer(u.token)).send({})).body.id as string;
   const mkTask = (userId: string, title: string) => ctx.prisma.task.create({ data: { userId, title } });
   /** สั่งลบ → agent หยุดรออนุมัติ → คืนคำขออนุมัติ */
-  async function askToDelete(taskId: string, u = a, conversationId = conv, extraArgs: Record<string, unknown> = {}) {
+  let lastConv = "";
+  // แต่ละคำขอใช้บทสนทนาใหม่: บทสนทนาที่ยังมีคำขออนุมัติค้างอยู่รับข้อความใหม่ไม่ได้ (409) — ดู describe ท้ายไฟล์
+  async function askToDelete(taskId: string, u = a, conversationId?: string, extraArgs: Record<string, unknown> = {}) {
+    lastConv = conversationId ?? (await newConv(u));
     ctx.useScript(call("d1", "deleteTask", { id: taskId, ...extraArgs }), new AIMessage("ลบแล้ว"));
-    return request(ctx.http()).post(`/conversations/${conversationId}/chat`).set(bearer(u.token)).send({ message: "ลบงานนี้" });
+    return request(ctx.http()).post(`/conversations/${lastConv}/chat`).set(bearer(u.token)).send({ message: "ลบงานนี้" });
   }
-  const decide = (approvalId: string, body: object, u = a, conversationId = conv) =>
+  const decide = (approvalId: string, body: object, u = a, conversationId = lastConv) =>
     request(ctx.http()).post(`/conversations/${conversationId}/approvals/${approvalId}`).set(bearer(u.token)).send(body);
 
   beforeAll(async () => {
     ctx = await makeApp();
     a = await registerUser(ctx.http(), "appr-a");
     b = await registerUser(ctx.http(), "appr-b");
-    conv = await newConv();
   });
   afterAll(async () => {
     await ctx.prisma.user.deleteMany({ where: { id: { in: [a.id, b.id] } } });
@@ -104,11 +105,11 @@ describe.skipIf(!hasDb)("19-11 approval endpoint (human-in-the-loop)", () => {
   test("user B cannot decide A's approval (404) and B's task cannot be deleted by A through the model", async () => {
     const t = await mkTask(a.id, "ของ A");
     const { body } = await askToDelete(t.id);
-    expect((await decide(body.approval.id, { decision: "approve" }, b, conv)).status).toBe(404);
+    expect((await decide(body.approval.id, { decision: "approve" }, b, lastConv)).status).toBe(404);
     expect(await ctx.prisma.task.count({ where: { id: t.id } })).toBe(1);
 
     const bTask = await mkTask(b.id, "ของ B");
-    const sneaky = await askToDelete(bTask.id, a, conv, { userId: b.id }); // model พยายามลบงานของ B (และส่ง userId ของ B)
+    const sneaky = await askToDelete(bTask.id, a, undefined, { userId: b.id }); // model พยายามลบงานของ B (และส่ง userId ของ B)
     const res = await decide(sneaky.body.approval.id, { decision: "approve" });
     expect(res.status).toBe(409);
     expect(await ctx.prisma.task.count({ where: { id: bTask.id } })).toBe(1);
@@ -126,5 +127,57 @@ describe.skipIf(!hasDb)("19-11 approval endpoint (human-in-the-loop)", () => {
     const { body } = await askToDelete(t.id);
     expect((await decide(body.approval.id, { decision: "maybe" })).status).toBe(400);
     expect((await decide(body.approval.id, { decision: "edit" })).status).toBe(400); // edit ต้องมี args
+  });
+
+  describe("a conversation with an approval pending (found by the live run)", () => {
+    test("a new chat message while an approval is pending → 409, the model is not called, and after deciding the chat works again", async () => {
+      const c = await newConv();
+      const t = await mkTask(a.id, "ค้างรออนุมัติ");
+      const asked = await askToDelete(t.id, a, c);
+      const model = ctx.useScript(new AIMessage("ไม่ควรถึง"));
+      const blocked = await request(ctx.http()).post(`/conversations/${c}/chat`).set(bearer(a.token)).send({ message: "ขอถามอย่างอื่น" });
+      expect(blocked.status).toBe(409);
+      expect(blocked.body.message).toMatch(/อนุมัติ/);
+      expect(model.calls).toBe(0);
+      const stream = await request(ctx.http()).post(`/conversations/${c}/chat/stream`).set(bearer(a.token)).send({ message: "อื่นๆ" });
+      expect(stream.status).toBe(409);
+
+      ctx.useScript(new AIMessage("ลบแล้ว"));
+      expect((await decide(asked.body.approval.id, { decision: "approve" }, a, c)).status).toBe(200);
+      ctx.useScript(new AIMessage("ว่าไงครับ"));
+      const ok = await request(ctx.http()).post(`/conversations/${c}/chat`).set(bearer(a.token)).send({ message: "สวัสดี" });
+      expect(ok.status).toBe(200);
+      expect(ok.body.reply).toBe("ว่าไงครับ");
+    });
+
+    test("GET /conversations/:id/approvals?status=pending lists the pending requests (own conversation only)", async () => {
+      const c = await newConv();
+      const t = await mkTask(a.id, "ต้องแสดงใน dialog");
+      const asked = await askToDelete(t.id, a, c);
+      const list = await request(ctx.http()).get(`/conversations/${c}/approvals?status=pending`).set(bearer(a.token));
+      expect(list.status).toBe(200);
+      expect(list.body).toEqual([expect.objectContaining({ id: asked.body.approval.id, status: "pending", actions: [expect.objectContaining({ name: "deleteTask" })] })]);
+      expect((await request(ctx.http()).get(`/conversations/${c}/approvals?status=pending`).set(bearer(b.token))).status).toBe(404);
+      ctx.useScript(new AIMessage("ปฏิเสธแล้ว"));
+      await decide(asked.body.approval.id, { decision: "reject" }, a, c);
+      expect((await request(ctx.http()).get(`/conversations/${c}/approvals?status=pending`).set(bearer(a.token))).body).toEqual([]);
+    });
+
+    test("after a stale approval (task vanished → 409) the conversation is NOT left stuck: chat works again", async () => {
+      const c = await newConv();
+      const t = await mkTask(a.id, "หายระหว่างรอ");
+      const asked = await askToDelete(t.id, a, c);
+      await ctx.prisma.task.delete({ where: { id: t.id } });
+      ctx.useScript(new AIMessage("ไม่ได้ลบ เพราะงานไม่มีอยู่แล้ว")); // ผลของการ resume แบบ reject เพื่อปิด thread ให้สะอาด
+      expect((await decide(asked.body.approval.id, { decision: "approve" }, a, c)).status).toBe(409);
+      // thread ต้องไม่เหลือ tool call ที่ไม่มีผลลัพธ์ (provider จริงจะตอบ 400 INVALID_TOOL_RESULTS)
+      const msgs = (await request(ctx.http()).get(`/conversations/${c}/messages`).set(bearer(a.token))).body as { role: string; toolCalls?: unknown[] }[];
+      const calls = msgs.flatMap((m) => m.toolCalls ?? []).length;
+      expect(msgs.filter((m) => m.role === "tool").length).toBe(calls);
+      ctx.useScript(new AIMessage("กลับมาคุยต่อได้"));
+      const next = await request(ctx.http()).post(`/conversations/${c}/chat`).set(bearer(a.token)).send({ message: "ต่อ" });
+      expect(next.status).toBe(200);
+      expect(next.body.reply).toBe("กลับมาคุยต่อได้");
+    });
   });
 });

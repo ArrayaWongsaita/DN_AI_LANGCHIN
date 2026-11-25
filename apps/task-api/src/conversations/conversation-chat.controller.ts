@@ -1,4 +1,4 @@
-import { Body, Controller, HttpCode, Inject, Param, Post, Res, UseGuards, UseInterceptors } from "@nestjs/common";
+import { Body, ConflictException, Controller, Get, HttpCode, Inject, Param, Post, Res, UseGuards, UseInterceptors } from "@nestjs/common";
 import type { Response } from "express";
 import { z } from "zod";
 import { AgentService, type AgentRunResult } from "../ai/agent.service.js";
@@ -16,6 +16,7 @@ import { ConversationsService } from "./conversations.service.js";
 
 const ChatBody = z.object({ message: z.string().trim().min(1, "ข้อความต้องไม่ว่าง").max(4000, "ข้อความยาวเกิน 4000 ตัวอักษร") });
 
+const PENDING_MESSAGE = "มีคำขออนุมัติที่ค้างอยู่ในบทสนทนานี้ กรุณาอนุมัติหรือปฏิเสธก่อนส่งข้อความใหม่";
 const sse = (res: Response, event: string, data: unknown) => res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
 
 @Controller("conversations/:id")
@@ -35,6 +36,7 @@ export class ConversationChatController {
   async chat(@CurrentUser() user: PublicUser, @Param("id") id: string, @Body() body: unknown) {
     const { message } = parseBody(ChatBody, body);
     await this.conversations.getOwned(user.id, id);
+    if (await this.approvals.hasOpen(id)) throw new ConflictException(PENDING_MESSAGE);
     const result = await this.agent.run({ ctx: buildRuntimeContext(user), conversationId: id, message });
     await this.conversations.touch(id);
     return this.withApproval(user.id, id, result);
@@ -51,6 +53,7 @@ export class ConversationChatController {
   async stream(@CurrentUser() user: PublicUser, @Param("id") id: string, @Body() body: unknown, @Res() res: Response) {
     const { message } = parseBody(ChatBody, body);
     await this.conversations.getOwned(user.id, id); // ตรวจก่อนเริ่มสตรีม: ผิดสิทธิ์ได้ 404 ปกติ
+    if (await this.approvals.hasOpen(id)) throw new ConflictException(PENDING_MESSAGE);
     const abort = new AbortController();
     const started = Date.now();
     let usage = { inputTokens: 0, outputTokens: 0 };
@@ -85,6 +88,13 @@ export class ConversationChatController {
       await this.usage.record({ userId: user.id, route: "POST /conversations/:id/chat/stream", status, ms: Date.now() - started, ...usage });
       res.end();
     }
+  }
+
+  /** คำขออนุมัติที่ยังค้าง — ใช้แสดง dialog ซ้ำหลังโหลดหน้าใหม่ */
+  @Get("approvals")
+  async pending(@CurrentUser() user: PublicUser, @Param("id") id: string) {
+    await this.conversations.getOwned(user.id, id);
+    return (await this.approvals.listPending(user.id, id)).map((a) => ({ id: a.id, status: a.status, actions: a.actions, createdAt: a.createdAt }));
   }
 
   @Post("approvals/:approvalId")

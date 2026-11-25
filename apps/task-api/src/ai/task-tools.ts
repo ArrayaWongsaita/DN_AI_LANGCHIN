@@ -2,6 +2,7 @@ import { tool } from "@langchain/core/tools";
 import { z } from "zod";
 import { formatDueDate } from "../tasks/dates.js";
 import { TaskPriority, TaskStatus } from "../tasks/task.schemas.js";
+import type { KnowledgeService } from "../knowledge/knowledge.service.js";
 import type { TasksService } from "../tasks/tasks.service.js";
 import type { RuntimeContext } from "./runtime-context.js";
 
@@ -26,11 +27,11 @@ const list = (rows: Parameters<typeof show>[0][]) => JSON.stringify(rows.map(sho
 const dueDateField = z.string().describe("วันครบกำหนด รูปแบบ YYYY-MM-DD (ปฏิทิน Asia/Bangkok) เช่น 2026-12-01");
 
 /**
- * Task tools ทั้ง 12 ตัว (adapter บางๆ เหนือ TasksService — กฎธุรกิจ/การเช็คเจ้าของอยู่ที่ service)
- * read-only: getTasks getTaskById searchTasks getTodayTasks getOverdueTasks getTaskSummary
+ * Tools ทั้ง 13 ตัว (adapter บางๆ เหนือ TasksService — กฎธุรกิจ/การเช็คเจ้าของอยู่ที่ service)
+ * read-only: getTasks getTaskById searchTasks getTodayTasks getOverdueTasks getTaskSummary searchKnowledge
  * write: createTask updateTask completeTask changeTaskPriority changeTaskDueDate · destructive: deleteTask (ต้องอนุมัติ)
  */
-export function createTaskTools(tasks: TasksService) {
+export function createTaskTools(tasks: TasksService, knowledge: KnowledgeService) {
   const getTasks = tool(async ({ status, priority }, rt) => list(await tasks.list(userIdOf(rt), { status, priority })), {
     name: "getTasks",
     description: "ดูรายการงานของผู้ใช้ปัจจุบัน (กรองตามสถานะ/ความสำคัญได้)",
@@ -61,6 +62,18 @@ export function createTaskTools(tasks: TasksService) {
     description: "ตัวเลขสรุปงาน: ทั้งหมด ตามสถานะ/ความสำคัญ เลยกำหนด วันนี้ สัปดาห์นี้ เสร็จใน 7 วันที่ผ่านมา",
     schema: z.object({}),
   });
+
+  const searchKnowledge = tool(
+    async ({ query }, rt) => {
+      const r = await knowledge.search(userIdOf(rt), query);
+      return r.found ? JSON.stringify({ results: r.results.map((x) => ({ content: x.content, source: `${x.title} (${x.source}, ส่วนที่ ${x.chunk + 1})` })) }) : r.answer;
+    },
+    {
+      name: "searchKnowledge",
+      description: "ค้นความรู้จากเอกสารที่ผู้ใช้อัปโหลดไว้ ตอบโดยอ้างแหล่งที่มา ถ้าได้ 'ไม่พบข้อมูลที่เกี่ยวข้องในเอกสาร' ให้ตอบตามนั้น ห้ามเดา",
+      schema: z.object({ query: z.string().min(1) }),
+    },
+  );
 
   const createTask = tool(async (input, rt) => JSON.stringify(show(await tasks.create(userIdOf(rt), input))), {
     name: "createTask",
@@ -95,5 +108,5 @@ export function createTaskTools(tasks: TasksService) {
     { name: "deleteTask", description: "ลบงาน (ต้องได้รับอนุมัติจากผู้ใช้ก่อนเสมอ)", schema: z.object({ id: z.string() }) },
   );
 
-  return [getTasks, getTaskById, searchTasks, getTodayTasks, getOverdueTasks, getTaskSummary, createTask, updateTask, completeTask, changeTaskPriority, changeTaskDueDate, deleteTask];
+  return [getTasks, getTaskById, searchTasks, getTodayTasks, getOverdueTasks, getTaskSummary, searchKnowledge, createTask, updateTask, completeTask, changeTaskPriority, changeTaskDueDate, deleteTask];
 }

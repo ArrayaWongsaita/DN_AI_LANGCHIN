@@ -32,13 +32,19 @@ import { AgentService } from "../src/ai/agent.service.js";
 import { SummaryService } from "../src/ai/summary.service.js";
 import { CHAT_MODEL } from "../src/ai/model.provider.js";
 import { AppModule } from "../src/app.module.js";
+import { EMBEDDINGS } from "../src/knowledge/knowledge.service.js";
+import { createFakeEmbeddings } from "../src/shared/embeddings-fake.js";
+import { countingEmbeddings } from "../src/shared/embeddings-counting.js";
 import { createScriptedChatModel } from "../src/shared/scripted-model.js";
 
 export const call = (id: string, name: string, args: Record<string, unknown> = {}) =>
   new AIMessage({ content: "", tool_calls: [{ id, name, args }] });
 
 export async function makeApp(options: { mcp?: boolean } = {}) {
+  const embeddings = countingEmbeddings(createFakeEmbeddings(768)); // ไม่เรียก Gemini ในเทสต์
   let builder = Test.createTestingModule({ imports: [AppModule] })
+    .overrideProvider(EMBEDDINGS)
+    .useValue(embeddings)
     .overrideProvider(CHAT_MODEL)
     .useFactory({ factory: () => createScriptedChatModel([]) });
   if (options.mcp) builder = builder.overrideProvider(MCP_TOOLS).useValue(createMcpTools);
@@ -53,7 +59,7 @@ export async function makeApp(options: { mcp?: boolean } = {}) {
     (app.get(SummaryService) as unknown as { model: unknown }).model = model;
     return model;
   };
-  return { app, mod, agent, prisma: app.get(PrismaServiceRef), jwt: app.get(JwtService), useScript, http: () => app.getHttpServer() };
+  return { app, mod, agent, embeddings, prisma: app.get(PrismaServiceRef), jwt: app.get(JwtService), useScript, http: () => app.getHttpServer() };
 }
 
 import { PrismaService as PrismaServiceRef } from "../src/prisma/prisma.service.js";

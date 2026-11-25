@@ -30,6 +30,7 @@ model User {
   createdAt    DateTime @default(now())
   tasks        Task[]
   conversations Conversation[]
+  documents     KnowledgeDocument[]
 }
 
 model Task {
@@ -99,4 +100,30 @@ model UsageLog {
   createdAt    DateTime @default(now())
 
   @@index([userId, createdAt])
+}
+
+/// เอกสารความรู้ที่ผู้ใช้อัปโหลด (txt/md) — แบ่งเป็น chunk แล้วเก็บ vector ใน DocumentChunk
+model KnowledgeDocument {
+  id        String          @id @default(uuid())
+  userId    String
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  source    String
+  createdAt DateTime        @default(now())
+  chunks    DocumentChunk[]
+
+  @@index([userId, createdAt])
+}
+
+/// embedding เป็นคอลัมน์ pgvector (Prisma อ่าน/เขียนตรงๆ ไม่ได้ ใช้ raw SQL ใน KnowledgeService เท่านั้น)
+model DocumentChunk {
+  id         String                 @id @default(uuid())
+  documentId String
+  document   KnowledgeDocument      @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  idx        Int
+  content    String
+  embedding  Unsupported("vector(768)")?
+  metadata   Json?
+
+  @@index([documentId])
 }
