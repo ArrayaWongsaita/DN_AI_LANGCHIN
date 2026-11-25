@@ -1,5 +1,7 @@
 # Workshop 18 — Evaluation Suite for the Task Agent
 
+> **เริ่มทำ:** เปิดโครงให้เติมที่ [`starter/`](starter/) (มี `TODO` บอกทีละจุด) — ทำเองก่อน แล้วค่อยเทียบ [`solution/`](solution/)
+
 ## โจทย์
 สร้างชุดประเมิน (evaluation suite) ให้ agent จัดการงานจาก Part 17 ครอบคลุม **8 หมวด** — และพิสูจน์ว่า "ถ้าถอด guardrail ออก ชุดทดสอบต้องตก"
 

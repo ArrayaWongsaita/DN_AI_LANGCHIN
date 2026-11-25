@@ -1,5 +1,7 @@
 # Workshop 07 — AI Content Processor
 
+> **เริ่มทำ:** เปิดโครงให้เติมที่ [`starter/`](starter/) (มี `TODO` บอกทีละจุด) — ทำเองก่อน แล้วค่อยเทียบ [`solution/`](solution/)
+
 ## โจทย์
 รับบทความ แล้วสร้างผลลัพธ์: **Summary, Keywords, Sentiment, Suggested Title** ด้วย pipeline ที่ประกอบจาก Runnable
 

@@ -1,5 +1,7 @@
 # Workshop 17 — AI Task Management Agent
 
+> **เริ่มทำ:** เปิดโครงให้เติมที่ [`starter/`](starter/) (มี `TODO` บอกทีละจุด) — ทำเองก่อน แล้วค่อยเทียบ [`solution/`](solution/)
+
 ## โจทย์
 Agent จัดการงาน (in-memory `TaskStore`) ที่ **อ่านได้ทันที**, **เพิ่ม/แก้ตามสิทธิ์**, **ลบต้องมนุษย์อนุมัติ**, **มี audit history**, และ **จำกัดจำนวน tool call**
 

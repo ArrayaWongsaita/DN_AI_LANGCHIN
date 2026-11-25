@@ -1,5 +1,7 @@
 # Workshop 09 — AI Assistant with Tools
 
+> **เริ่มทำ:** เปิดโครงให้เติมที่ [`starter/`](starter/) (มี `TODO` บอกทีละจุด) — ทำเองก่อน แล้วค่อยเทียบ [`solution/`](solution/)
+
 ## โจทย์
 สร้างผู้ช่วยที่มี 6 tools: `add`, `subtract`, `multiply`, `getWeather`, `searchProduct`, `getCurrentDate` (ข้อมูลอากาศ/สินค้าเป็น mock ใน `src/data/products.ts` และ `src/tools/index.ts`)
 โมเดลต้องเลือก tool เอง รันผ่านโค้ดของเรา และสรุปคำตอบ **1 รอบของ tool calling**

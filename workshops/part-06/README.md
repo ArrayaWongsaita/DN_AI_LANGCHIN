@@ -1,5 +1,7 @@
 # Workshop 06 — AI Product Extractor
 
+> **เริ่มทำ:** เปิดโครงให้เติมที่ [`starter/`](starter/) (มี `TODO` บอกทีละจุด) — ทำเองก่อน แล้วค่อยเทียบ [`solution/`](solution/)
+
 ## โจทย์
 รับข้อความสินค้าภาษาไทย เช่น `เสื้อสีดำราคา 350 บาท มีไซซ์ M และ L` แล้วแปลงเป็น object ที่ประกอบด้วย `name, price, color, sizes, category`
 

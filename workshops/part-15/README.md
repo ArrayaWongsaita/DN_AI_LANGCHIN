@@ -1,5 +1,7 @@
 # Workshop 15 — Persistent Lesson Search (PostgreSQL + pgvector)
 
+> **เริ่มทำ:** เปิดโครงให้เติมที่ [`starter/`](starter/) (มี `TODO` บอกทีละจุด) — ทำเองก่อน แล้วค่อยเทียบ [`solution/`](solution/)
+
 ## โจทย์
 ค้นหาบทเรียนใน `data/lessons.json` ตามความหมาย โดย **index ครั้งเดียว** เก็บใน pgvector แล้วค้นได้ในการรันครั้งต่อๆ ไป (คนละโปรเซส) ไม่ต้อง embed ใหม่
 

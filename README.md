@@ -3,6 +3,8 @@
 หลักสูตร 20 Part (6 Module) สอน LangChain.js (v1 modern API) ตั้งแต่พื้นฐาน LLM จนถึง AI Agent ระดับ production
 สำหรับคนที่เขียน JavaScript/TypeScript และ async/await เป็นแล้ว ไม่ต้องมีพื้นฐาน Machine Learning
 
+> **มือใหม่เริ่มที่ [`docs/start-here.md`](docs/start-here.md)** — เส้นทางเรียน สิ่งที่ต้องเตรียม และลำดับทำทีละ Part
+
 ## ติดตั้ง
 
 ต้องใช้ Node.js 20 ขึ้นไป (ทดสอบกับ Node 26) และ [pnpm](https://pnpm.io/installation)
@@ -22,7 +24,7 @@ pnpm play 04-01    # เหมือนกัน
 
 - ทุกตัวอย่างรันแยกกันได้ ไม่ต้องเข้าใจโค้ดทั้ง repo
 - อ่านเนื้อหาของแต่ละ Part ที่ `parts/NN-ชื่อ/README.md`
-- Workshop และเฉลยอยู่ที่ `workshops/part-NN/`
+- Workshop อยู่ที่ `workshops/part-NN/` — เริ่มจาก `starter/` (โครงให้เติม) แล้วเทียบ `solution/` (เฉลย)
 - เป้าหมายการเรียนและรายการตัวอย่างทั้งหมดอยู่ใน [`docs/course-outline.md`](docs/course-outline.md)
 
 ## Model ที่ใช้ในหลักสูตร
