@@ -26,9 +26,9 @@
 
 ## ข้ามไป / ยังไม่ทำ
 - LangSmith (ยังไม่มี `LANGSMITH_API_KEY` — ต้องใช้ใน Part 18+)
-- Embedding (Google Gemini) และ pgvector/Docker — Phase 2 (Part 12–13)
-- Tools/Agents (Part 09+) — Phase 2
+- Embedding (Google Gemini) และ pgvector/Docker — Phase 2 (Part 14–16)
+- Tools/Agents (Part 09–12) — Phase 2
 
 ## Phase ถัดไป
-- Phase 2: Part 09–15 (Tools, Agent, Memory, Embeddings/Vector Store, RAG)
-- Phase 3: Part 16–20 (Production, LangSmith, NestJS, Capstone)
+- Phase 2: Part 09–16 (Tools, Agent Loop, createAgent, Memory, Documents, Embeddings, Vector Stores, RAG)
+- Phase 3: Part 17–20 (Middleware & HITL, Testing, Backend/NestJS, Capstone)
