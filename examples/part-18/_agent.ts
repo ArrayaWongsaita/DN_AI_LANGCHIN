@@ -9,12 +9,13 @@ import type { BaseChatModel } from "@langchain/core/language_models/chat_models"
 const contextSchema = z.object({ userId: z.string(), role: z.enum(["viewer", "editor", "admin"]), name: z.string() });
 
 /** agent เดียวกับ Part 17 แต่รับ model จากข้างนอก — เทสต์ส่ง scripted model, ตัวอย่างจริงส่ง model จริง */
-export function buildTaskAgent(model: BaseChatModel, store = new TaskStore()) {
+export function buildTaskAgent(model: BaseChatModel, store = new TaskStore(), opts: { systemPrompt?: string } = {}) {
   const audit: AuditEntry[] = [];
   const agent = createAgent({
     model,
     tools: createTaskTools(store),
     contextSchema,
+    systemPrompt: opts.systemPrompt,
     checkpointer: new MemorySaver(),
     middleware: [
       createToolErrorMiddleware(),
