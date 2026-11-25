@@ -15,6 +15,7 @@ beforeAll(() => {
   mkdirSync(join(root, "part-04"));
   writeFileSync(join(root, "part-04", "04-01-human-message.ts"), "");
   writeFileSync(join(root, "part-04", "04-02-system-message.ts"), "");
+  writeFileSync(join(root, "part-04", "_helper.ts"), ""); // ไฟล์ช่วย ไม่ใช่ตัวอย่าง
 });
 
 describe("resolveExample", () => {
