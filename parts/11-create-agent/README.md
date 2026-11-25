@@ -84,57 +84,98 @@ flowchart LR
 
 ## 7. Coding Examples
 
-รัน `pnpm play 11-N` — ตรวจกับ Groq `openai/gpt-oss-20b` (11-08 ใช้ scripted model) · ผลจาก LLM คือ *ตัวอย่างผลลัพธ์ — LLM ไม่ได้ตอบเหมือนเดิมทุกครั้ง*
+รัน `pnpm play 11-N` — บันทึกจาก TokenMe `deepseek-ai/deepseek-v4.1-flash-1017` (11-08 ใช้ scripted model) · ผลจาก LLM คือ *ตัวอย่างผลลัพธ์ — LLM ไม่ได้ตอบเหมือนเดิมทุกครั้ง*
 
-> **หมายเหตุ provider:** ค่าเริ่มต้นของ repo ตอนนี้คือ **TokenMe** (`TOKENME_API_KEY`) — ทุกตัวอย่างถูกรันซ้ำบน TokenMe แล้วผ่าน แต่ข้อความ/ตัวเลข token/เวลาที่แสดงด้านล่างบันทึกไว้จากการรันบน Groq จึงจะไม่ตรงกับที่คุณเห็นเป๊ะ (ไม่ใช่ข้อผิดพลาด)
 
 ### 11-01 First createAgent()
 ```
 จำนวนข้อความใน state: 2
 ชนิดข้อความ: human → ai
-คำตอบ: AI agent คือซอฟต์แวร์หรือระบบคอมพิวเตอร์ที่ใช้ปัญญาประดิษฐ์เพื่อทำงานอัตโนมัติ …
+คำตอบ: AI agent คือระบบ AI ที่รับรู้บริบทหรือสภาพแวดล้อม แล้วตัดสินใจและลงมือทำตามเป้าหมายโดยอัตโนมัติ  
+โดยทั่วไปมันสามารถวางแผนหลายขั้นตอน ใช้เครื่องมือหรือเรียก API และปรับการทำงานจากผลลัพธ์ที่ได้รับ
 ```
 ### 11-02 Agent with One Tool — ดูหัวข้อ 4
 ### 11-03 Agent with Multiple Tools
 ```
+
 อากาศที่ภูเก็ตเป็นอย่างไร
   tools: getWeather
-  ตอบ: สภาพอากาศภูเก็ตวันนี้เป็นฝนตกเล็กน้อย อุณหภูมิประมาณ 30 °C.
+  ตอบ: สภาพอากาศที่ภูเก็ตตอนนี้ **ฝนตกเล็กน้อย อุณหภูมิ 30°C** 🌧️
+
+如果您需要其他信息，比如查看商品或查询日期，我也可以帮忙。
+
 ค้นหา keyboard ให้หน่อย แล้วบอกวันที่วันนี้ด้วย
   tools: searchProduct → getCurrentDate
-  ตอบ: **ผลการค้นหา:** - **Mechanical Keyboard** - ราคา: 2,490 บาท - เหลือ: 3 ชิ้น  **วันที่วันนี้:** 2026-11-25
+  ตอบ: ผลการค้นหาครับ:
+
+**⌨️ Mechanical Keyboard**
+- ราคา: 2,490 บาท
+- คงเหลือ: 3 ชิ้น
+
+**📅 วันที่วันนี้:** 25 พฤศจิกายน 2026 (2026-11-25)
+
+หากต้องการทราบรายละเอียดเพิ่มเติมหรือสนใจสินค้าอื่น บอกได้เลยครับ
 ```
 ### 11-04 Agent System Prompt — ไม่มี vs มี systemPrompt
 ```
+
 --- ไม่มี systemPrompt ---
-**มี Mechanical Keyboard รุ่นที่แนะนำให้เลือก** | **Mechanical Keyboard 1** | 2,490 บาท | … (ตอบยาว มีตารางและชื่อรุ่นที่แต่งขึ้น)
+มีครับ — ตอนนี้เจอตัวนี้ในระบบ:
+
+**Mechanical Keyboard (คีย์บอร์ดแมคคานิคอล)**
+- ราคา: 2,490 บาท
+- คงเหลือ: 3 ชิ้น
+
+**คำแนะนำ:** ถ้าคุณกำลังมองหาคีย์บอร์ดพิมพ์งาน/เล่นเกมทั่วไป ตัวนี้เป็นตัวเลือกที่คุ้มและมีของพร้อมส่ง แต่มีสต็อกแค่ 3 ชิ้นเท่านั้น ถ้าสนใจแนะนำให้รีบตัดสินใจครับ
+
+ถ้าอยากให้ช่วยเลือกให้ตรงใจมากขึ้น บอกผมเพิ่มได้เลยว่า:
+1. งบประมาณที่ตั้งไว้ประมาณเท่าไหร่
+2. ใช้พิมพ์งาน เล่นเกม หรือทั้งสองอย่าง
+3. ชอบแบบมีไฟ RGB / ไร้สาย / ขนาดเล็ก (60%, TKL) ไหม
+
+เดี๋ยวผมช่วยเทียบหรือลองค้นหาเพิ่มให้ครับ 🙂
+
 --- มี systemPrompt ---
-มี Mechanical Keyboard ราคา 2490 บาท (เหลือ 3 ชิ้น) ค่ะ
+ตอนนี้ร้านมี Mechanical Keyboard ราคา 2,490 บาท เหลือ 3 ชิ้นค่ะ ขออนุญาตแนะนำตัวนี้เพราะเป็นรุ่นเดียวที่ร้านมีในสต็อกค่ะ สนใจให้มะลิจองไว้ไหมคะ
 ```
 ### 11-05 Agent Structured Output
 ```
-structuredResponse: { inStock: true, price: 2490, productName: 'Mechanical Keyboard' }
+structuredResponse: { productName: 'Mechanical Keyboard', price: 2490, inStock: true }
 typeof price: number (TypeScript รู้ type จาก schema)
 ```
 ### 11-06 Agent Streaming (`streamMode: "messages"`)
 ```
-AI: **ภูเก็ตอากาศสวยงาม** ฝนพร่องพองพริกไทย … 
-(ได้ 51 chunks ที่มีข้อความ)
+AI: **อากาศที่ภูเก็ตวันนี้:** ฝนตกเล็กอย่าง อุณหภูมิ 30°C ☔️
+
+**กลอนสั้นๆ ฝากไว้:**
+
+ภูเก็ตวันนี้ฝนตกโปรยปราย
+ท้องฟ้าครึ้มเทาคล้ายฝนหนักหนา
+อากาศยังร้อนสามสิบองศา
+ทะเลเงียบงามตาเมื่อฝนซา
+
+รวมความว่า ฝนปรอยๆ ทั้งวัน อากาศอุ่นๆ ชื้นๆ ยังเที่ยวได้ แต่พกร่มติดตัวไว้จะดีที่สุดครับ 🌂
+
+(ได้ 118 chunks ที่มีข้อความ)
 ```
 ### 11-07 Agent Execution Updates (`streamMode: "updates"`)
 ```
-[model_request] ai: ขอ searchProduct
+[model_request] ai: ขอ searchProduct, getCurrentDate
 [tools] tool: Mechanical Keyboard ราคา 2490 บาท (เหลือ 3 ชิ้น)
-[model_request] ai: ขอ getCurrentDate
 [tools] tool: 2026-11-25
-[model_request] ai: **ผลการค้นหา:** - **Mechanical Keyboard** - ราคา: 2,490 บาท …
+[model_request] ai: ได้ผลลัพธ์ทั้งสองอย่างแล้วครับ:
+
+**ผลการค้นหา keyboard**
+- Mechanical Keyboard —
 ```
 ### 11-08 Agent Error Handling (scripted — ซ้ำได้แน่นอน)
 ```
 (1) tool พัง — agent ส่ง error ให้โมเดลแล้วโมเดลอธิบายผู้ใช้ได้
    human → ai → tool → ai | ขออภัย ระบบค้นข้อมูลขัดข้อง ลองใหม่ภายหลังนะคะ
+
 (2) โมเดลวนขอ tool ไม่หยุด — recursionLimit ตัดให้
-   GraphRecursionError: Recursion limit of 6 reached without hitting a stop condition. …
+   GraphRecursionError: Recursion limit of 6 reached without hitting a stop condition. You can increase the limit 
+
 (3) ผู้ใช้ยกเลิกก่อนเริ่ม
    AbortError: This operation was aborted
 ```

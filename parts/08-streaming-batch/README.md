@@ -84,28 +84,42 @@ flowchart LR
 
 ## 7. Coding Examples
 
-รัน `pnpm play 8-N` — ผลลัพธ์คือ *ตัวอย่างผลลัพธ์ — LLM ไม่ได้ตอบเหมือนเดิมทุกครั้ง* (ตัวเลขเวลาขึ้นกับเครือข่าย; ตรวจกับ Groq `openai/gpt-oss-20b`)
+รัน `pnpm play 8-N` — ผลลัพธ์คือ *ตัวอย่างผลลัพธ์ — LLM ไม่ได้ตอบเหมือนเดิมทุกครั้ง* (ตัวเลขเวลาขึ้นกับเครือข่าย; บันทึกจาก TokenMe `deepseek-ai/deepseek-v4.1-flash-1017`)
 
-> **หมายเหตุ provider:** ค่าเริ่มต้นของ repo ตอนนี้คือ **TokenMe** (`TOKENME_API_KEY`) — ทุกตัวอย่างถูกรันซ้ำบน TokenMe แล้วผ่าน แต่ข้อความ/ตัวเลข token/เวลาที่แสดงด้านล่างบันทึกไว้จากการรันบน Groq จึงจะไม่ตรงกับที่คุณเห็นเป๊ะ (ไม่ใช่ข้อผิดพลาด)
 
 ### 08-01 invoke() vs stream()
 ```
-invoke(): ได้ผลทีเดียวหลัง 731 ms (354 ตัวอักษร)
-stream(): ชิ้นแรกมาใน 513 ms (TTFT) | จบหลัง 656 ms (367 ตัวอักษร)
+invoke(): ได้ผลทีเดียวหลัง 4484 ms (259 ตัวอักษร)
+stream(): ชิ้นแรกมาใน 2075 ms (TTFT) | จบหลัง 3254 ms (290 ตัวอักษร)
+→ เวลารวมใกล้เคียงกัน แต่ stream ให้ผู้ใช้เห็นผลเร็วกว่ามาก
 ```
 
 ### 08-02 Read Streaming Chunks
 ```
-AI: หนึ่ง, สอง, สาม, สี่, ห้า, หก, เจ็ด, แปด, เก้า, สิบ
+AI: 
 [ชนิดของ chunk: AIMessageChunk]
-ได้ทั้งหมด 110 chunks
+หนึ่ง, สอง, สาม, สี่, ห้า, หก, เจ็ด, แปด, เก้า, สิบ
+
+ได้ทั้งหมด 85 chunks
 ```
 
 ### 08-03 Combine Message Chunks
 ```
-ข้อความรวม: - มะม่วง - ส้ม - สับปะรด
-usage_metadata: undefined
-response_metadata.usage: { input_tokens: 84, output_tokens: 35, total_tokens: 238, … completion_tokens_details: { reasoning_tokens: 9 } }
+ข้อความรวม: ทุเรียน, มังคุด, ลำไย
+usage_metadata: {
+  input_tokens: 42,
+  output_tokens: 69,
+  total_tokens: 111,
+  input_token_details: { cache_read: 0 },
+  output_token_details: { reasoning: 54 }
+}
+response_metadata.usage: {
+  prompt_tokens: 42,
+  total_tokens: 111,
+  completion_tokens: 69,
+  prompt_tokens_details: { cached_tokens: 0, created_cache_tokens: 0 },
+  completion_tokens_details: { reasoning_tokens: 54 }
+}
 finish_reason: stop
 ```
 > `@langchain/groq` 1.3.2 ใส่ usage ไว้ที่ `response_metadata.usage` ไม่ใช่ `usage_metadata` (เป็นเรื่องของ integration ไม่ใช่ provider ไม่ส่ง)
@@ -113,16 +127,16 @@ finish_reason: stop
 
 ### 08-04 Streaming Pipeline
 ```
-prompt→model→parser          : ได้ 53 chunks
+prompt→model→parser          : ได้ 145 chunks
 …→ RunnableLambda (ไม่ stream): ได้ 1 chunks
 ```
 
 ### 08-05 Batch Processing
 ```
-สวัสดีตอนเช้า → Good morning
-ขอบคุณมาก → Thank you very much
+สวัสดีตอนเช้า → Good morning.
+ขอบคุณมาก → Thank you very much.
 ห้องน้ำอยู่ที่ไหน → Where is the bathroom?
-อร่อยมาก → Delicious.
+อร่อยมาก → Very delicious.
 
 returnExceptions: [ '✅ OK', '❌ ข้อความว่าง', '✅ FINE' ]
 ```
@@ -132,15 +146,15 @@ returnExceptions: [ '✅ OK', '❌ ข้อความว่าง', '✅ FINE
 
 ### 08-07 Limit Concurrency (mock หน่วง 300 ms, ไม่เสียโควตา)
 ```
-maxConcurrency=ไม่จำกัด → ทำพร้อมกันสูงสุด 8 งาน | ใช้เวลา 308 ms
-maxConcurrency=2        → ทำพร้อมกันสูงสุด 2 งาน | ใช้เวลา 1209 ms
-maxConcurrency=4        → ทำพร้อมกันสูงสุด 4 งาน | ใช้เวลา 604 ms
+maxConcurrency=ไม่จำกัด → ทำพร้อมกันสูงสุด 8 งาน | ใช้เวลา 305 ms
+maxConcurrency=2        → ทำพร้อมกันสูงสุด 2 งาน | ใช้เวลา 1211 ms
+maxConcurrency=4        → ทำพร้อมกันสูงสุด 4 งาน | ใช้เวลา 606 ms
 ```
 
 ### 08-08 Abort Request (ยกเลิกหลัง 700 ms)
 ```
 ถูกยกเลิก: AbortError — This operation was aborted
-ข้อความบางส่วนที่ได้ก่อนยกเลิก (520 ตัวอักษร): การอ่านหนังสือเป็นกิจกรรมที่มีประโยชน์ต่อชีวิตทุกด้าน …
+ข้อความบางส่วนที่ได้ก่อนยกเลิก (0 ตัวอักษร):
 ```
 
 ### 08-09 Handle Rate Limit (mock ที่ตอบ 429, ซ้ำได้แน่นอน)
@@ -149,8 +163,14 @@ maxConcurrency=4        → ทำพร้อมกันสูงสุด 4 �
   ครั้งที่ 1 ล้มเหลว (HTTP 429) → รอ 200 ms แล้วลองใหม่
   ครั้งที่ 2 ล้มเหลว (HTTP 429) → รอ 400 ms แล้วลองใหม่
   ผลลัพธ์: สำเร็จแล้ว! (เรียกทั้งหมด 3 ครั้ง)
-(2) 429 ตลอด → ❌ 429 Too Many Requests (จำลอง)
-(3) 401 → throw ทันที ไม่ retry
+
+(2) 429 ตลอด → เกินจำนวนครั้งที่ลองได้ ต้อง throw:
+  ครั้งที่ 1 ล้มเหลว (HTTP 429) → รอ 100 ms แล้วลองใหม่
+  ครั้งที่ 2 ล้มเหลว (HTTP 429) → รอ 200 ms แล้วลองใหม่
+  ❌ 429 Too Many Requests (จำลอง)
+
+(3) error ที่ไม่ควร retry (เช่น 401) → throw ทันที:
+  ❌ 401 Invalid API Key
 ```
 
 ## 8. Common Mistakes

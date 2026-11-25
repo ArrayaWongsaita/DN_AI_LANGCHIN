@@ -87,33 +87,38 @@ flowchart TD
 
 ## 7. Coding Examples
 
-รัน `pnpm play 10-N` — ตรวจกับ Groq `openai/gpt-oss-20b`; 10-05, 10-06, 10-07 ใช้ mock/scripted (ผลซ้ำได้แน่นอน, ไม่เสียโควตา) · ผลจาก LLM คือ *ตัวอย่างผลลัพธ์ — LLM ไม่ได้ตอบเหมือนเดิมทุกครั้ง*
+รัน `pnpm play 10-N` — บันทึกจาก TokenMe `deepseek-ai/deepseek-v4.1-flash-1017`; 10-05, 10-06, 10-07 ใช้ mock/scripted (ผลซ้ำได้แน่นอน, ไม่เสียโควตา) · ผลจาก LLM คือ *ตัวอย่างผลลัพธ์ — LLM ไม่ได้ตอบเหมือนเดิมทุกครั้ง*
 
-> **หมายเหตุ provider:** ค่าเริ่มต้นของ repo ตอนนี้คือ **TokenMe** (`TOKENME_API_KEY`) — ทุกตัวอย่างถูกรันซ้ำบน TokenMe แล้วผ่าน แต่ข้อความ/ตัวเลข token/เวลาที่แสดงด้านล่างบันทึกไว้จากการรันบน Groq จึงจะไม่ตรงกับที่คุณเห็นเป๊ะ (ไม่ใช่ข้อผิดพลาด)
 
 ### 10-01 Single Tool Execution
 ```
 1) โมเดลขอ: multiply({"a":1234,"b":5678})
 2) เรารัน tool แล้วส่งผลกลับ
-3) คำตอบ: ผลรวมของปากกา 1,234 ด้ามที่ราคา 5,678 บาทต่อด้ามคือ **7,006,652 บาท**.
+3) คำตอบ: 1,234 × 5,678 = **7,006,652 บาท** ครับ
 ```
 ### 10-02 Two-step Tool Execution — ดูหัวข้อ 4
 ### 10-03 Manual Agent Loop (`while` เขียนเอง)
 ```
 รอบ 1: add({"a":15,"b":27})
 รอบ 2: multiply({"a":42,"b":3})
-จบที่รอบ 3: ผลคือ **126**.
+จบที่รอบ 3: **ผลลัพธ์: 126**
+
+ขั้นตอน:
+1. 15 + 27 = **42**
+2. 42 × 3 = **126**
 ```
 ### 10-04 Dependent Tool Calls
 ```
   รอบ 1: searchProduct({"query":"Mechanical Keyboard"})
   รอบ 2: multiply({"a":2490,"b":3})
 หยุดเพราะ: final หลัง 3 รอบ
-คำตอบ: ผลลัพธ์คือ **7,470 บาท** (2490 บาท × 3)
+คำตอบ: **Mechanical Keyboard** ราคา **2,490 บาท** (คงเหลือ 3 ชิ้น)
+
+คูณ 3 ตัว: 2,490 × 3 = **7,470 บาท**
 ```
 ### 10-05 Parallel Tool Calls (จำลอง AIMessage 3 call)
 ```
-ใช้เวลา 304 ms (ลำดับ: 300+100+200 = 600 ms ถ้าทำทีละตัว)
+ใช้เวลา 305 ms (ลำดับ: 300+100+200 = 600 ms ถ้าทำทีละตัว)
   tool_call_id=id-A → ข้อมูลของ A
   tool_call_id=id-B → ข้อมูลของ B
   tool_call_id=id-C → ข้อมูลของ C
@@ -122,21 +127,30 @@ flowchart TD
 ```
 maxIterations=3 → stopReason=max_iterations, เรียกโมเดล 3 ครั้ง, ข้อความทั้งหมด 7
 maxIterations=5 → stopReason=max_iterations, เรียกโมเดล 5 ครั้ง, ข้อความทั้งหมด 11
+→ ไม่ว่าโมเดลจะวนแค่ไหน loop หยุดตามเพดาน และผู้เรียกตรวจ stopReason เพื่อรู้ว่าคำตอบไม่สมบูรณ์
 ```
 ### 10-07 Handle Tool Failures (scripted)
 ```
 [c1] status=error: Error: ไม่พบ tool ชื่อ "teleport" (มี: add, subtract, multiply, getWeather, sear
-[c2] status=error: Error: Received tool input did not match expected schema …
+[c2] status=error: Error: Received tool input did not match expected schema
+
+✖ Invalid input: expec
 จบด้วย final หลัง 3 รอบ: ขออภัย ใช้เครื่องมือไม่สำเร็จ จึงไม่สามารถคำนวณให้ได้
 ```
 ### 10-08 Logging Agent Execution
 ```
-[+659ms] รอบ 1 โมเดล → ขอ searchProduct
-[+667ms] รอบ 1 tool   → Mechanical Keyboard ราคา 2490 บาท (เหลือ 3 ชิ้น)
-[+1087ms] รอบ 2 โมเดล → ขอ multiply
-[+1088ms] รอบ 2 tool   → 4980
-[+1657ms] รอบ 3 โมเดล → ตอบสุดท้าย
+[+4271ms] รอบ 1 โมเดล → ขอ searchProduct
+[+4281ms] รอบ 1 tool   → Mechanical Keyboard ราคา 2490 บาท (เหลือ 3 ชิ้น)
+[+7324ms] รอบ 2 โมเดล → ขอ multiply
+[+7326ms] รอบ 2 tool   → 4980
+[+11065ms] รอบ 3 โมเดล → ตอบสุดท้าย
+
 สรุป: final, 3 รอบ
+ผลลัพธ์ครับ:
+
+- **สินค้า:** Mechanical Keyboard
+- **ราคา:** 2,490 บาท (คงเหลือ 3 ชิ้น)
+- **ราคา × 2:** 2,490 × 2 = **4,980 บาท**
 ```
 
 ## 8. Common Mistakes
