@@ -2,6 +2,7 @@
 // แนวคิด: เรียก API ผ่านเครือข่ายล้มเหลวได้เสมอ — ต้องใช้ try/catch และแยกประเภทของ error
 // ตัวอย่างนี้ "จงใจทำให้พัง" 3 แบบจริง (ไม่แก้ .env) และจำลอง 2 แบบที่ทำซ้ำยาก (429, 402)
 import { initChatModel } from "langchain/chat_models/universal";
+import { TOKENME_BASE_URL, TOKENME_MODEL } from "../../src/models/index.js";
 import { requireEnv } from "../../src/utils/env.js";
 
 /** แปลง error เป็นคำอธิบายที่ผู้ใช้เข้าใจ โดยดู HTTP status */
@@ -17,12 +18,13 @@ function explainError(err: unknown): string {
   return `ข้อผิดพลาดอื่น: ${e.message}`;
 }
 
-async function tryCall(label: string, modelName: string, options: Record<string, unknown>) {
+async function tryCall(label: string, modelName: string, options: { apiKey: string; baseURL?: string }) {
   try {
     const model = await initChatModel(modelName, {
-      modelProvider: "groq",
+      modelProvider: "openai", // TokenMe ใช้รูปแบบเดียวกับ OpenAI
+      configuration: { baseURL: options.baseURL ?? TOKENME_BASE_URL },
+      apiKey: options.apiKey,
       maxRetries: 0, // ปิด retry อัตโนมัติ เพื่อให้เห็น error ทันที
-      ...options,
     });
     await model.invoke("hi");
     console.log(`[${label}] สำเร็จ`);
@@ -31,11 +33,11 @@ async function tryCall(label: string, modelName: string, options: Record<string,
   }
 }
 
-const goodKey = requireEnv("GROQ_API_KEY");
-const GOOD_MODEL = "openai/gpt-oss-20b";
-await tryCall("API key ผิด", GOOD_MODEL, { apiKey: "gsk_invalid_key" });
+const goodKey = requireEnv("TOKENME_API_KEY");
+const GOOD_MODEL = TOKENME_MODEL;
+await tryCall("API key ผิด", GOOD_MODEL, { apiKey: "invalid_key" });
 await tryCall("ชื่อ model ผิด", "no-such-model", { apiKey: goodKey });
-await tryCall("เครือข่ายล้มเหลว", GOOD_MODEL, { apiKey: goodKey, baseUrl: "http://127.0.0.1:9" });
+await tryCall("เครือข่ายล้มเหลว", GOOD_MODEL, { apiKey: goodKey, baseURL: "http://127.0.0.1:9" });
 
 // 429 และ 402 ทำซ้ำจริงยาก/เสี่ยงเสียเงิน จึงจำลองด้วย object ที่มี status
 console.log("[Rate limit]", "❌", explainError({ status: 429 }));

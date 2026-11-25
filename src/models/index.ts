@@ -19,9 +19,10 @@ export interface ChatModelOptions {
 
 /** TokenMe เป็น gateway แบบ OpenAI-compatible — ใช้ client ของ OpenAI ชี้ baseURL มาที่นี่ */
 export const TOKENME_BASE_URL = "https://api.tokenme.limited/api/v1";
+export const TOKENME_MODEL = "deepseek-ai/deepseek-v4.1-flash-1017";
 
 const DEFAULTS: Record<ProviderName, { model: string; keyName: string }> = {
-  tokenme: { model: "deepseek-ai/deepseek-v4.1-flash-1017", keyName: "TOKENME_API_KEY" },
+  tokenme: { model: TOKENME_MODEL, keyName: "TOKENME_API_KEY" },
   groq: { model: "openai/gpt-oss-20b", keyName: "GROQ_API_KEY" },
   deepseek: { model: "deepseek-flash", keyName: "DEEPSEEK_API_KEY" },
 };
