@@ -11,7 +11,9 @@
     "db:up": "docker compose up -d --wait",
     "db:down": "docker compose down",
     "app:api": "pnpm --filter task-api start",
-    "app:api:test": "pnpm --filter task-api test"
+    "app:api:test": "pnpm --filter task-api test",
+    "app:web": "pnpm --filter task-web dev",
+    "app:web:test": "pnpm --filter task-web test"
   },
   "devDependencies": {
     "@types/node": "26.6.6",
