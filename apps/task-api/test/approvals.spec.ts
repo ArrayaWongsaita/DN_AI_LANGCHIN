@@ -1,0 +1,130 @@
+import { AIMessage } from "@langchain/core/messages";
+import request from "supertest";
+import { afterAll, beforeAll, describe, expect, test } from "vitest";
+import { bearer, call, hasDb, makeApp, registerUser } from "./helpers.js";
+
+describe.skipIf(!hasDb)("19-11 approval endpoint (human-in-the-loop)", () => {
+  let ctx: Awaited<ReturnType<typeof makeApp>>;
+  let a: Awaited<ReturnType<typeof registerUser>>;
+  let b: Awaited<ReturnType<typeof registerUser>>;
+  let conv: string;
+
+  const newConv = async (u = a) => (await request(ctx.http()).post("/conversations").set(bearer(u.token)).send({})).body.id as string;
+  const mkTask = (userId: string, title: string) => ctx.prisma.task.create({ data: { userId, title } });
+  /** สั่งลบ → agent หยุดรออนุมัติ → คืนคำขออนุมัติ */
+  async function askToDelete(taskId: string, u = a, conversationId = conv, extraArgs: Record<string, unknown> = {}) {
+    ctx.useScript(call("d1", "deleteTask", { id: taskId, ...extraArgs }), new AIMessage("ลบแล้ว"));
+    return request(ctx.http()).post(`/conversations/${conversationId}/chat`).set(bearer(u.token)).send({ message: "ลบงานนี้" });
+  }
+  const decide = (approvalId: string, body: object, u = a, conversationId = conv) =>
+    request(ctx.http()).post(`/conversations/${conversationId}/approvals/${approvalId}`).set(bearer(u.token)).send(body);
+
+  beforeAll(async () => {
+    ctx = await makeApp();
+    a = await registerUser(ctx.http(), "appr-a");
+    b = await registerUser(ctx.http(), "appr-b");
+    conv = await newConv();
+  });
+  afterAll(async () => {
+    await ctx.prisma.user.deleteMany({ where: { id: { in: [a.id, b.id] } } });
+    await ctx.prisma.auditLog.deleteMany({ where: { userId: { in: [a.id, b.id] } } });
+    await ctx.app.close();
+  });
+
+  test("a delete request pauses the agent: approval_required in the response, task still exists", async () => {
+    const t = await mkTask(a.id, "งานที่จะลบ");
+    const res = await askToDelete(t.id);
+    expect(res.status).toBe(200);
+    expect(res.body.approval).toMatchObject({ actions: [{ name: "deleteTask", args: { id: t.id } }] });
+    expect(res.body.approval.id).toBeTruthy();
+    expect(await ctx.prisma.task.count({ where: { id: t.id } })).toBe(1);
+  });
+
+  test("approve → the task is deleted, the agent replies, an audit row is written", async () => {
+    const t = await mkTask(a.id, "ลบจริง");
+    const { body } = await askToDelete(t.id);
+    const res = await decide(body.approval.id, { decision: "approve" });
+    expect(res.status).toBe(200);
+    expect(res.body.reply).toBe("ลบแล้ว");
+    expect(await ctx.prisma.task.count({ where: { id: t.id } })).toBe(0);
+    const audit = await ctx.prisma.auditLog.findMany({ where: { userId: a.id, action: "approval.approve" } });
+    expect(audit.length).toBeGreaterThanOrEqual(1);
+  });
+
+  test("calling the endpoint twice → the second call returns the first result and deletes once", async () => {
+    const t = await mkTask(a.id, "ลบครั้งเดียว");
+    const { body } = await askToDelete(t.id);
+    const first = await decide(body.approval.id, { decision: "approve" });
+    const model = ctx.useScript(); // ถ้าคำขอที่สองไปเรียก model/agent อีก จะ throw (สคริปต์ว่าง)
+    const second = await decide(body.approval.id, { decision: "approve" });
+    expect(second.status).toBe(200);
+    expect(second.body).toEqual(first.body);
+    expect(model.calls).toBe(0);
+    expect(await ctx.prisma.auditLog.count({ where: { userId: a.id, action: "approval.approve", detail: { path: ["taskId"], equals: t.id } } })).toBe(1);
+  });
+
+  test("two concurrent decisions → exactly one execution", async () => {
+    const t = await mkTask(a.id, "แข่งกัน");
+    const { body } = await askToDelete(t.id);
+    const [r1, r2] = await Promise.all([decide(body.approval.id, { decision: "approve" }), decide(body.approval.id, { decision: "approve" })]);
+    expect([r1.status, r2.status].filter((s) => s === 200).length).toBeGreaterThanOrEqual(1);
+    expect(await ctx.prisma.auditLog.count({ where: { userId: a.id, action: "approval.approve", detail: { path: ["taskId"], equals: t.id } } })).toBe(1);
+  });
+
+  test("reject → the task stays and the agent is told", async () => {
+    const t = await mkTask(a.id, "ไม่ลบ");
+    const { body } = await askToDelete(t.id);
+    ctx.useScript(new AIMessage("ยกเลิกการลบแล้ว"));
+    const res = await decide(body.approval.id, { decision: "reject" });
+    expect(res.status).toBe(200);
+    expect(await ctx.prisma.task.count({ where: { id: t.id } })).toBe(1);
+  });
+
+  test("edit → runs with the edited args (a different task of mine)", async () => {
+    const t1 = await mkTask(a.id, "เดิม");
+    const t2 = await mkTask(a.id, "ที่แก้ให้ลบแทน");
+    const { body } = await askToDelete(t1.id);
+    ctx.useScript(new AIMessage("ลบงานที่แก้แล้ว"));
+    const res = await decide(body.approval.id, { decision: "edit", args: { id: t2.id } });
+    expect(res.status).toBe(200);
+    expect(await ctx.prisma.task.count({ where: { id: t1.id } })).toBe(1);
+    expect(await ctx.prisma.task.count({ where: { id: t2.id } })).toBe(0);
+  });
+
+  test("approve after the task was removed meanwhile → 409 with a Thai message, nothing deleted", async () => {
+    const t = await mkTask(a.id, "หายไปก่อน");
+    const { body } = await askToDelete(t.id);
+    await ctx.prisma.task.delete({ where: { id: t.id } });
+    const res = await decide(body.approval.id, { decision: "approve" });
+    expect(res.status).toBe(409);
+    expect(res.body.message).toMatch(/ไม่มีอยู่แล้ว|ไม่พบ/);
+    expect(await ctx.prisma.auditLog.count({ where: { userId: a.id, action: "approval.approve", detail: { path: ["taskId"], equals: t.id } } })).toBe(0);
+  });
+
+  test("user B cannot decide A's approval (404) and B's task cannot be deleted by A through the model", async () => {
+    const t = await mkTask(a.id, "ของ A");
+    const { body } = await askToDelete(t.id);
+    expect((await decide(body.approval.id, { decision: "approve" }, b, conv)).status).toBe(404);
+    expect(await ctx.prisma.task.count({ where: { id: t.id } })).toBe(1);
+
+    const bTask = await mkTask(b.id, "ของ B");
+    const sneaky = await askToDelete(bTask.id, a, conv, { userId: b.id }); // model พยายามลบงานของ B (และส่ง userId ของ B)
+    const res = await decide(sneaky.body.approval.id, { decision: "approve" });
+    expect(res.status).toBe(409);
+    expect(await ctx.prisma.task.count({ where: { id: bTask.id } })).toBe(1);
+  });
+
+  test("an approval id from another conversation is 404", async () => {
+    const t = await mkTask(a.id, "คนละบทสนทนา");
+    const { body } = await askToDelete(t.id);
+    const other = await newConv();
+    expect((await decide(body.approval.id, { decision: "approve" }, a, other)).status).toBe(404);
+  });
+
+  test("invalid decision body → 400", async () => {
+    const t = await mkTask(a.id, "body ผิด");
+    const { body } = await askToDelete(t.id);
+    expect((await decide(body.approval.id, { decision: "maybe" })).status).toBe(400);
+    expect((await decide(body.approval.id, { decision: "edit" })).status).toBe(400); // edit ต้องมี args
+  });
+});

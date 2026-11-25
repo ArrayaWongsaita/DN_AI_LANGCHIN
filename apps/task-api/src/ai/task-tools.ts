@@ -1,12 +1,8 @@
 import { tool } from "@langchain/core/tools";
 import { z } from "zod";
 import { TaskPriority, TaskStatus } from "../tasks/task.schemas.js";
+import type { RuntimeContext } from "./runtime-context.js";
 import type { TasksService } from "../tasks/tasks.service.js";
-
-/** runtime context ที่ backend สร้างจาก token ที่ตรวจแล้ว — ไม่ใช่ข้อมูลจาก model */
-export interface RuntimeContext {
-  userId: string;
-}
 
 type Runtime = { context?: Partial<RuntimeContext> } | undefined;
 
@@ -71,5 +67,13 @@ export function createTaskTools(tasks: TasksService) {
     { name: "completeTask", description: "ทำเครื่องหมายว่างานเสร็จแล้ว", schema: z.object({ id: z.string() }) },
   );
 
-  return [getTasks, createTask, updateTask, completeTask];
+  const deleteTask = tool(
+    async ({ id }, runtime) => {
+      await tasks.remove(userIdOf(runtime), id);
+      return JSON.stringify({ deleted: id });
+    },
+    { name: "deleteTask", description: "ลบงาน (ต้องได้รับอนุมัติจากผู้ใช้ก่อนเสมอ)", schema: z.object({ id: z.string() }) },
+  );
+
+  return [getTasks, createTask, updateTask, completeTask, deleteTask];
 }

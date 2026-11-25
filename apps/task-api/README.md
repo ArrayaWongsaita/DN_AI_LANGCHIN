@@ -42,3 +42,11 @@ src/
 | 19-04 | Chat Controller | `ai/chat.controller.ts` (`POST /chat`, zod, 400/401) | `part-19-04` |
 | 19-05 | Tool calls → Business Service | `ai/task-tools.ts` → `tasks/tasks.service.ts` | `part-19-05` |
 | 19-06 | Prisma Integration | `prisma/`, `tasks/tasks.repository.ts`, `prisma/schema.prisma` | `part-19-06` |
+| 19-07 | User-scoped tools + JWT auth | `auth/`, `ai/task-tools.ts` (tool ไม่มีฟิลด์ userId) | `part-19-07` |
+| 19-08 | Runtime Context | `ai/runtime-context.ts` (สร้างจากผู้ใช้ที่ตรวจแล้วเท่านั้น) | `part-19-08` |
+| 19-09 | Conversation API | `conversations/` (ประวัติอ่านจาก checkpointer, ตรวจเจ้าของ → 404) | `part-19-09` |
+| 19-10 | SSE streaming | `conversations/conversation-chat.controller.ts` (`token/tool_start/tool_end/approval_required/done/error`, ตัดสายแล้วหยุดงาน) | `part-19-10` |
+| 19-11 | Approval endpoint | `conversations/approvals.service.ts`, `ai/approval.middleware.ts` (idempotent, recheck, audit) | `part-19-11` |
+
+**ข้อจำกัดที่ต้องรู้:** checkpointer เป็น `MemorySaver` (ในหน่วยความจำ — รีสตาร์ทแล้วประวัติ/คำขออนุมัติที่ค้างหาย; Part 19 ต่อไปจะเปลี่ยนเป็น Postgres) · token อายุ 15 นาที ยังไม่มี refresh token
+`bash scripts/smoke.sh` = ทดสอบจริงกับ model (ต้องมี key และ DB)

@@ -25,8 +25,11 @@ model User {
   name         String
   email        String   @unique
   passwordHash String
+  role         String   @default("user") // "user" | "admin"
+  locale       String   @default("th") // "th" | "en"
   createdAt    DateTime @default(now())
   tasks        Task[]
+  conversations Conversation[]
 }
 
 model Task {
@@ -43,4 +46,43 @@ model Task {
 
   @@index([userId, status])
   @@index([userId, dueDate])
+}
+
+model Conversation {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  approvals Approval[]
+
+  @@index([userId, updatedAt])
+}
+
+/// คำขออนุมัติที่ agent หยุดรอ (HITL) — เก็บใน DB เพื่อให้ตัดสินใจได้ครั้งเดียว (idempotent) และตรวจย้อนหลังได้
+model Approval {
+  id             String       @id @default(uuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  userId         String
+  actions        Json // [{ name, args }]
+  status         String       @default("pending") // pending | resolving | decided | stale
+  decision       String?
+  result         Json?
+  createdAt      DateTime     @default(now())
+  decidedAt      DateTime?
+
+  @@index([conversationId, status])
+}
+
+model AuditLog {
+  id             String   @id @default(uuid())
+  userId         String
+  conversationId String?
+  action         String
+  detail         Json
+  createdAt      DateTime @default(now())
+
+  @@index([userId, createdAt])
 }

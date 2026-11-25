@@ -9,7 +9,9 @@ import { CHAT_MODEL } from "../src/ai/model.provider.js";
 import { PrismaService } from "../src/prisma/prisma.service.js";
 import { createScriptedChatModel } from "../src/shared/scripted-model.js";
 import { TasksService } from "../src/tasks/tasks.service.js";
-import { hasDb, uniqueEmail } from "./helpers.js";
+import { buildRuntimeContext } from "../src/ai/runtime-context.js";
+import { bearer, hasDb, uniqueEmail } from "./helpers.js";
+import { JwtService } from "@nestjs/jwt";
 
 const call = (id: string, name: string, args: Record<string, unknown> = {}) => new AIMessage({ content: "", tool_calls: [{ id, name, args }] });
 
@@ -55,7 +57,7 @@ describe.skipIf(!hasDb)("task-api foundation (19-01 … 19-06)", () => {
 
   test("19-03/05 agent service creates the task for the CONTEXT user even when the model passes another userId", async () => {
     use(call("1", "createTask", { title: "ซื้อกาแฟ", userId: userB }), new AIMessage("เพิ่มแล้ว"));
-    const r = await agent.run({ userId: userA, threadId: "t-foundation-1", message: "เพิ่มงาน ซื้อกาแฟ" });
+    const r = await agent.run({ ctx: buildRuntimeContext({ id: userA, role: "user", locale: "th" }), conversationId: "t-foundation-1", message: "เพิ่มงาน ซื้อกาแฟ" });
     expect(r.reply).toBe("เพิ่มแล้ว");
     expect(r.toolCalls.map((c) => c.name)).toEqual(["createTask"]);
     expect((await tasks.list(userA)).map((t) => t.title)).toContain("ซื้อกาแฟ");
@@ -81,9 +83,10 @@ describe.skipIf(!hasDb)("task-api foundation (19-01 … 19-06)", () => {
   });
 
   describe("19-04 POST /chat", () => {
-    const post = (body: unknown, userId: string | null = userA) => {
+    const post = async (body: unknown, userId: string | null = userA) => {
       const r = request(nest.getHttpServer()).post("/chat");
-      return (userId ? r.set("x-dev-user-id", userId) : r).send(body as object);
+      const token = userId ? await app.get(JwtService).signAsync({ sub: userId }) : null;
+      return (token ? r.set(bearer(token)) : r).send(body as object);
     };
 
     test("400 for an empty or missing message", async () => {
@@ -97,7 +100,7 @@ describe.skipIf(!hasDb)("task-api foundation (19-01 … 19-06)", () => {
       expect((await post({ message: "สวัสดี", threadId: "user:other:conv:1" })).status).toBe(400);
     });
 
-    test("401 without a (dev) user", async () => {
+    test("401 without a token", async () => {
       expect((await post({ message: "สวัสดี" }, null)).status).toBe(401);
     });
 

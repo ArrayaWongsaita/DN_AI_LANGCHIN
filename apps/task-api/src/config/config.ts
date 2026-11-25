@@ -4,11 +4,13 @@ export const APP_CONFIG = Symbol("APP_CONFIG");
 
 const schema = z.object({
   TASK_API_DATABASE_URL: z.string().min(1, "ต้องตั้ง TASK_API_DATABASE_URL (ดู .env.example)"),
+  JWT_SECRET: z.string().min(16, "JWT_SECRET ต้องยาวอย่างน้อย 16 ตัวอักษร (สุ่มด้วย openssl rand -hex 32)"),
   PORT: z.coerce.number().int().positive().default(3000),
 });
 
 export interface AppConfig {
   databaseUrl: string;
+  jwtSecret: string;
   port: number;
 }
 
@@ -18,5 +20,5 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   if (!parsed.success) {
     throw new Error(`ตั้งค่า environment ไม่ครบ: ${parsed.error.issues.map((i) => i.message).join("; ")}`);
   }
-  return { databaseUrl: parsed.data.TASK_API_DATABASE_URL, port: parsed.data.PORT };
+  return { databaseUrl: parsed.data.TASK_API_DATABASE_URL, jwtSecret: parsed.data.JWT_SECRET, port: parsed.data.PORT };
 }
