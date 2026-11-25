@@ -20,3 +20,37 @@ describe("parseOrigins", () => {
     expect(parseOrigins("  ")).toEqual(["http://localhost:3001"]);
   });
 });
+
+import { z } from "zod";
+import { localizeMessage } from "../src/common/public-error.js";
+import { parseBody } from "../src/common/zod.js";
+
+describe("English framework messages never reach the client", () => {
+  test.each([
+    [404, "Cannot GET /nope", /ไม่พบ/],
+    [400, "Expected property name or '}' in JSON at position 1 (line 1 column 2)", /JSON/],
+    [400, "Unexpected token } in JSON at position 5", /JSON/],
+    [413, "request entity too large", /ใหญ่เกิน/],
+  ])("%i %s → Thai", (status, raw, expected) => {
+    const out = localizeMessage(status, raw);
+    expect(out).toMatch(expected);
+    expect(out.replace(/JSON/g, "")).not.toMatch(/[A-Za-z]{3,}/); // no English words left
+  });
+
+  test("Thai messages and unknown ones pass through untouched", () => {
+    expect(localizeMessage(404, "ไม่พบงาน x")).toBe("ไม่พบงาน x");
+  });
+
+  test("zod default English issues are replaced by a Thai field-level message, custom Thai messages are kept", () => {
+    const schema = z.object({ email: z.string(), age: z.number().min(18, "ต้องอายุอย่างน้อย 18") });
+    let message = "";
+    try {
+      parseBody(schema, { age: 3 });
+    } catch (e) {
+      message = (e as Error).message;
+    }
+    expect(message).toContain("email");
+    expect(message).toContain("ต้องอายุอย่างน้อย 18");
+    expect(message).not.toMatch(/Invalid input|expected string/);
+  });
+});

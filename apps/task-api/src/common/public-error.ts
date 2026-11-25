@@ -21,3 +21,11 @@ export function classifyError(err: unknown): PublicError {
   if (typeof status === "number" && status >= 500) return { status: 503, message: "ผู้ให้บริการ AI ขัดข้องชั่วคราว กรุณาลองใหม่ภายหลัง" };
   return { status: 500, message: "เกิดข้อผิดพลาดภายในระบบ" };
 }
+
+/** Replaces the English messages produced by Nest/Express (unknown route, broken JSON, body too large) with Thai ones; anything else is returned unchanged. */
+export function localizeMessage(status: number, message: string): string {
+  if (/^Cannot (GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS) /.test(message)) return "ไม่พบเส้นทางที่เรียก";
+  if (status === 413 || /entity too large/i.test(message)) return "ข้อมูลที่ส่งมาใหญ่เกินกำหนด";
+  if (status === 400 && /JSON|Unexpected token|Expected property name/.test(message)) return "รูปแบบ JSON ที่ส่งมาไม่ถูกต้อง";
+  return message;
+}
