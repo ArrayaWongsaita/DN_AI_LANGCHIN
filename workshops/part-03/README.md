@@ -1,5 +1,7 @@
 # Workshop 03 — เปรียบเทียบ Model และ Configuration
 
+> **เริ่มทำ:** เปิดโครงให้เติมที่ [`starter/`](starter/) (มี `TODO` บอกทีละจุด) — ทำเองก่อน แล้วค่อยเทียบ [`solution/`](solution/)
+
 ## โจทย์
 ส่ง prompt เดียวกันไปยัง model/config ที่ต่างกัน แล้วเปรียบเทียบ **คุณภาพ ความเร็ว และ token usage**
 

@@ -1,5 +1,7 @@
 # Workshop 08 — Streaming Chatbot & Batch Translator
 
+> **เริ่มทำ:** เปิดโครงให้เติมที่ [`starter/`](starter/) (มี `TODO` บอกทีละจุด) — ทำเองก่อน แล้วค่อยเทียบ [`solution/`](solution/)
+
 ## โจทย์
 สองส่วน: (1) แชตบอทใน terminal ที่ **สตรีม** คำตอบและวัด TTFT (2) ตัวแปลหลายข้อความพร้อมกันที่ **ควบคุม concurrency** และทนต่อ rate limit
 

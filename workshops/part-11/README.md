@@ -1,5 +1,7 @@
 # Workshop 11 — AI Shopping Assistant
 
+> **เริ่มทำ:** เปิดโครงให้เติมที่ [`starter/`](starter/) (มี `TODO` บอกทีละจุด) — ทำเองก่อน แล้วค่อยเทียบ [`solution/`](solution/)
+
 ## โจทย์
 สร้างผู้ช่วยขายของด้วย `createAgent` ที่ค้นหาสินค้า ดูราคา ตรวจสต็อก เปรียบเทียบ คำนวณยอดรวม และ **ตอบเป็น object ตาม schema** (`items`, `total`, `note?`) — ข้อมูลเป็น mock ใน `src/data/products.ts`
 

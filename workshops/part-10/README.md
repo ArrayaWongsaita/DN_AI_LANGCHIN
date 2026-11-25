@@ -1,5 +1,7 @@
 # Workshop 10 — Shopping Agent Loop
 
+> **เริ่มทำ:** เปิดโครงให้เติมที่ [`starter/`](starter/) (มี `TODO` บอกทีละจุด) — ทำเองก่อน แล้วค่อยเทียบ [`solution/`](solution/)
+
 ## โจทย์
 เขียน agent ที่ใช้ loop ค้นสินค้า ตรวจราคา/จำนวนคงเหลือ และคำนวณยอดรวมด้วย tools หลายตัว (`searchProduct`, `add`, `multiply`) — ข้อมูลสินค้าเป็น mock ใน `src/data/products.ts`
 

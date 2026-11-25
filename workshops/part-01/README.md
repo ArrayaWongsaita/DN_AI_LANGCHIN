@@ -1,5 +1,7 @@
 # Workshop 01 — เลือกเครื่องมือให้เหมาะกับงาน
 
+> **เริ่มทำ:** คัดลอก [`starter/my-answers.md`](starter/my-answers.md) ไปเติมคำตอบ แล้วค่อยเทียบ [`solution/answers.md`](solution/answers.md)
+
 ## โจทย์
 
 วิเคราะห์แอปตัวอย่าง 5 แบบด้านล่าง แล้วเลือกว่าควรใช้ **(A) เรียก LLM ตรงๆ**, **(B) LangChain** หรือ **(C) LangGraph**
