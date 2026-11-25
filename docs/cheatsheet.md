@@ -75,10 +75,112 @@ const chain = prompt.pipe(model).pipe(new StringOutputParser());
 | `model.stream(x, { signal })` + `AbortController` | ยกเลิกคำขอ |
 | backoff (`src/utils/throttled-model.ts` สำหรับทดสอบ) | retry 429/5xx แบบเว้นเวลาเป็นเท่าตัว |
 
+## Tools & Tool Calling (Part 09)
+| API | import | ใช้ทำอะไร |
+|---|---|---|
+| `tool(fn, { name, description, schema })` | `@langchain/core/tools` | สร้าง tool (Zod schema = สัญญาของ args) |
+| `model.bindTools!([t1, t2])` | — | ให้โมเดลเห็น tool |
+| `ai.tool_calls` → `[{ name, args, id }]` | — | สิ่งที่โมเดล "ขอ" ให้เรียก (ยังไม่ได้รันอะไร) |
+| `t.invoke(args)` → string · `t.invoke(toolCall)` → `ToolMessage` | — | รัน tool เอง |
+| `new ToolMessage({ content, tool_call_id, status })` | `@langchain/core/messages` | ส่งผลกลับ (`status: "error"` เมื่อพัง) |
+| `z.toJSONSchema(schema)` | `zod` | ดู schema ที่โมเดลเห็นจริง |
+```ts
+const add = tool(async ({ a, b }) => String(a + b), { name: "add", description: "บวกเลข", schema: z.object({ a: z.number(), b: z.number() }) });
+const ai = await model.bindTools!([add]).invoke("2+3?");   // ai.tool_calls
+```
+ข้อควรรู้: Groq gpt-oss ไม่ส่ง parallel tool calls (DeepSeek ส่ง); DeepSeek ต้อง `thinking: false` เมื่อใช้ tools/structured output
+
+## Agent Loop (Part 10)
+| API | ใช้ทำอะไร |
+|---|---|
+| `executeToolCalls(tools, ai)` (`src/agents/execute-tools.ts`) | รัน tool ทุกตัวที่ขอ → `ToolMessage[]` ไม่ throw (ไม่พบ tool / args ผิด / tool พัง → `status: "error"`) |
+| `runAgentLoop({ model, tools, messages, maxIterations, onStep })` (`src/agents/agent-loop.ts`) | วน ถามโมเดล → รัน tool → ใส่ผลกลับ จนโมเดลตอบ หรือครบ `maxIterations` |
+| ตัวหยุด: ไม่มี `tool_calls` · `maxIterations` · `AbortSignal` | กัน loop ไม่จบ/เสียเงิน |
+
+## createAgent (Part 11)
+| API | import | ใช้ทำอะไร |
+|---|---|---|
+| `createAgent({ model, tools, systemPrompt, responseFormat, checkpointer, store })` | `langchain` | agent loop สำเร็จรูป |
+| `agent.invoke({ messages: [...] }, { recursionLimit, signal, configurable })` | — | รัน → `{ messages, structuredResponse? }` |
+| `toolStrategy(zodSchema)` / `providerStrategy(zodSchema)` | `langchain` | `responseFormat` → `result.structuredResponse` |
+| `agent.stream(input, { streamMode: "messages" \| "updates" \| "values" })` | — | token / ความคืบหน้าทีละ node / state เต็ม |
+| `GraphRecursionError` · `AbortError` | — | เกิน `recursionLimit` / ยกเลิก |
+| `retryAsync(fn, { attempts, delayMs })` (`src/utils/retry.js`) | — | retry เฉพาะ error ชั่วคราว (Groq 400 `tool_use_failed`/`output_parse_failed`, 429, 5xx, embedding ว่าง) |
+```ts
+const agent = createAgent({ model, tools, systemPrompt: "…", responseFormat: toolStrategy(schema) });
+const r = await agent.invoke({ messages: [{ role: "user", content: "…" }] }, { recursionLimit: 12 });
+```
+
+## Memory (Part 12)
+| API | import | ใช้ทำอะไร |
+|---|---|---|
+| `new MemorySaver()` | `@langchain/langgraph` | checkpointer ใน RAM |
+| `PostgresSaver.fromConnString(url)` + `.setup()` + `.end()` | `@langchain/langgraph-checkpoint-postgres` | checkpointer ใน PostgreSQL |
+| `PostgresStore.fromConnString(url)` + `.setup()` + `.stop()` | `@langchain/langgraph-checkpoint-postgres/store` | long-term memory |
+| `new InMemoryStore()` · `BaseStore` | `@langchain/langgraph-checkpoint` | store ใน RAM / interface |
+| `{ configurable: { thread_id } }` | — | กุญแจของบทสนทนา (ส่งทุกครั้ง) |
+| `checkpointer.getTuple(config)` | — | อ่าน state ที่เก็บ (`agent.getState` เป็น internal) |
+| `trimMessages(msgs, { maxTokens, tokenCounter, strategy: "last", startOn: "human" })` | `langchain` | ตัดประวัติโดยไม่ทิ้ง ToolMessage กำพร้า |
+| `threadIdFor(user, conv)` · `assertThreadOwner(user, threadId)` (`src/memory/thread-access.ts`) | — | thread ผูกผู้ใช้ + ตรวจสิทธิ์ |
+| `savePreference / getPreferences / deletePreferences` (`src/memory/preferences.ts`) | — | preference ต่อผู้ใช้ (namespace `["users", id, "preferences"]`) |
+| `withPostgresMemory(({ checkpointer, store }) => …)` (`src/memory/postgres.ts`) | — | เปิด/ปิด saver+store ให้ |
+
+## Documents & Splitters (Part 13)
+| API | import | ใช้ทำอะไร |
+|---|---|---|
+| `new Document({ pageContent, metadata })` | `@langchain/core/documents` | หน่วยข้อมูลของ RAG |
+| `TextLoader` · `JSONLoader(path, pointers?)` | `@langchain/classic/document_loaders/fs/text` · `…/json` | txt/md · json |
+| `CSVLoader` (ต้อง `d3-dsv`) · `PDFLoader` | `@langchain/community/document_loaders/fs/csv` · `…/pdf` | csv (1 แถว = 1 Document) · pdf (1 หน้า = 1 Document) |
+| `RecursiveCharacterTextSplitter({ chunkSize, chunkOverlap, separators })` · `CharacterTextSplitter` | `@langchain/textsplitters` | แบ่งข้อความ (`.splitDocuments(docs)`) |
+| `loadCurriculum(dir)` → `{ documents, warnings }` · `chunkDocuments(docs, opts)` (`src/rag/load-curriculum.ts`) | — | โหลดหลายชนิด + แบ่ง chunk + `chunkIndex` |
+
+## Embeddings & Semantic Search (Part 14)
+| API | ใช้ทำอะไร |
+|---|---|
+| `createEmbeddings(task?)` (`src/embeddings/index.ts`) | Gemini `gemini-embedding-001` 768 มิติ; `task`: `"RETRIEVAL_DOCUMENT"` / `"RETRIEVAL_QUERY"` |
+| `emb.embedQuery(text)` → `number[]` · `emb.embedDocuments(texts)` → `number[][]` | embed คำค้น / เอกสารเป็น batch |
+| `cosineSimilarity` · `dotProduct` · `euclideanDistance` (`src/utils/similarity.ts`) | วัดความคล้าย (cosine = ค่าเริ่มต้น) |
+| `semanticSearch({ query, documents, embeddings, queryEmbeddings?, topK, minScore })` (`src/rag/semantic-search.ts`) | ค้นตามความหมายแบบ manual |
+| `createFakeEmbeddings()` (`src/embeddings/fake.ts`) | embedding ปลอม deterministic สำหรับเทสต์ |
+ข้อควรรู้: Gemini free tier โควตาเต็ม → **คืน vector ว่างโดยไม่ throw**; คะแนน cosine อัดกันแคบ ~0.5–0.7 ต้อง calibrate threshold
+
+## Vector Stores & Retrievers (Part 15)
+| API | import | ใช้ทำอะไร |
+|---|---|---|
+| `MemoryVectorStore.fromDocuments(docs, emb)` · `.similaritySearch(q, k, filterFn)` · `.similaritySearchWithScore` | `@langchain/classic/vectorstores/memory` | store ใน RAM (score = similarity) |
+| `PGVectorStore` | `@langchain/community/vectorstores/pgvector` | pgvector (score = *distance* ยิ่งน้อยยิ่งใกล้) |
+| `createPgVectorStore({ embeddings, tableName, pool })` · `resetTable(name)` (`src/rag/pg-store.ts`) | — | สร้าง/ตรวจตาราง `vector(768)` · ลบตาราง |
+| `upsertDocuments(store, docs)` · `deleteBySource(store, source)` · `documentId(doc)` | — | index แบบ idempotent (id = sha256 → uuid) · ลบตามไฟล์ |
+| `store.similaritySearchVectorWithScore(vec, k, { subject: "math" })` · `store.maxMarginalRelevanceSearch(q, { k, fetchK, lambda })` | — | ค้น + filter · MMR (ลดผลซ้ำ) |
+| `store.asRetriever({ k, filter })` → Runnable (`invoke`, `batch`) | — | retriever มาตรฐาน |
+ความปลอดภัย: ชื่อตาราง (`assertTableName`) และ *คีย์* ของ filter ถูกต่อเข้า SQL — ต้องมาจากโค้ด ไม่ใช่ผู้ใช้
+
+## RAG (Part 16)
+| API (`src/rag/rag.ts`, `src/rag/curriculum-index.ts`) | ใช้ทำอะไร |
+|---|---|
+| `NOT_FOUND_ANSWER` | คำตอบมาตรฐานเมื่อไม่มีหลักฐาน |
+| `formatContext(docs)` | `<context>[1] (source) …</context>` (ปิดกรอบก่อนไม่ได้) |
+| `buildRagPrompt()` | system = กฎ 4 ข้อ · human = context + คำถาม |
+| `answerWithRag({ question, retriever, model, minDocs })` → `{ answer, sources, usedContext }` | RAG สองขั้น; ไม่มีเอกสาร → ไม่เรียกโมเดล |
+| `indexCurriculum({ embeddings, pool })` · `createCurriculumRetriever(store, { queryEmbeddings, k, maxDistance })` | index แบบ idempotent · retriever ที่ตัดผลไกลเกิน |
+```ts
+const r = await answerWithRag({ question, retriever, model });   // r.answer, r.sources
+```
+
+## Docker / PostgreSQL / Gemini setup (Phase 2)
+```bash
+docker compose up -d --wait        # pgvector/pgvector:0.8.0-pg17 พอร์ต 5435 (pnpm db:up)
+docker compose down                # หยุด (ข้อมูลอยู่ใน volume pgdata); เพิ่ม -v เพื่อลบข้อมูล
+# .env:  DATABASE_URL=postgres://langchain:langchain@localhost:5435/langchain_course
+#        GOOGLE_API_KEY=...        (Gemini embeddings, free tier)
+```
+Postgres ไม่ได้รัน → โค้ดตัวอย่างแจ้ง `docker compose up -d`; เทสต์ pgvector (`describe.skipIf`) จะถูกข้ามและแสดง `skipped`
+
 ## Commands
 ```bash
 pnpm play 4-1                         # รันตัวอย่าง 04-01
 pnpm exec tsx --env-file=.env <file>  # รัน workshop solution
 pnpm typecheck && pnpm test
+pnpm db:up / pnpm db:down             # เปิด/ปิด PostgreSQL + pgvector (Docker)
 ```
-Groq free tier จำกัด ~30 requests/นาที — รันหลายตัวอย่างติดกันให้เว้นช่วง
+Groq free tier จำกัด ~30 requests/นาที และ 8,000 tokens/นาที (gpt-oss-20b) · Gemini embeddings free tier มีโควตาต่อนาที — รันหลายตัวอย่างติดกันให้เว้นช่วง

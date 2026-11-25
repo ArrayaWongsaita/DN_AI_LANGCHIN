@@ -19,7 +19,7 @@ export function listExamples(part: number, examplesRoot = DEFAULT_EXAMPLES_ROOT)
   const dir = join(examplesRoot, `part-${pad(part)}`);
   if (!existsSync(dir)) return [];
   return readdirSync(dir)
-    .filter((f) => f.endsWith(".ts"))
+    .filter((f) => /^\d{2}-\d{2}-.+\.ts$/.test(f)) // ข้ามไฟล์ช่วย เช่น _helper.ts
     .sort();
 }
 
