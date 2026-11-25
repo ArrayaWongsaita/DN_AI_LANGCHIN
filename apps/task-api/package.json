@@ -13,7 +13,8 @@
     "migrate": "node --env-file=../../.env ./node_modules/prisma/build/index.js migrate dev",
     "generate": "node --env-file=../../.env ./node_modules/prisma/build/index.js generate",
     "db:create": "tsx --env-file=../../.env scripts/create-db.ts",
-    "postinstall": "node ./node_modules/prisma/build/index.js generate"
+    "postinstall": "node ./node_modules/prisma/build/index.js generate",
+    "eval:summary": "tsx --env-file=../../.env eval/summary-eval.ts"
   },
   "dependencies": {
     "@langchain/core": "1.5.1",
@@ -23,6 +24,7 @@
     "@langchain/langgraph": "1.7.5",
     "@langchain/langgraph-checkpoint": "1.2.3",
     "@langchain/mcp-adapters": "2.0.3",
+    "@langchain/openai": "1.8.5",
     "@langchain/textsplitters": "1.0.2",
     "@modelcontextprotocol/server": "2.4.0",
     "@nestjs/common": "12.6.1",

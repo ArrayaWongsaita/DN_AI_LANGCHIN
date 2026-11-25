@@ -30,12 +30,12 @@ Part นี้พาตั้งโปรเจกต์ TypeScript แบบเ
 |---|---|
 | `langchain` | ชั้นสูง: `initChatModel`, `createAgent`, middleware |
 | `@langchain/core` | abstraction หลัก: messages, prompts, runnables, tools |
-| `@langchain/groq`, `@langchain/deepseek`, … | integration ต่อ provider (ติดตั้งเฉพาะที่ใช้) |
+| `@langchain/openai`, `@langchain/groq`, `@langchain/deepseek`, … | integration ต่อ provider (ติดตั้งเฉพาะที่ใช้) — TokenMe ใช้รูปแบบเดียวกับ OpenAI จึงเรียกผ่าน `@langchain/openai` |
 | `zod` | schema สำหรับ tool/structured output (Part 06+) |
 
 ### API Key
 
-**Model Provider** = บริษัทที่ให้บริการ model (Groq, DeepSeek, OpenAI…) · **API Key** = รหัสลับระบุตัวตนของเรา
+**Model Provider** = บริษัทที่ให้บริการ model (TokenMe, Groq, DeepSeek, OpenAI…) · **API Key** = รหัสลับระบุตัวตนของเรา
 กฎเหล็ก: เก็บใน `.env`, ใส่ `.env` ใน `.gitignore`, ห้ามพิมพ์ key ลง log/แชต/commit
 
 ## 4. Problem Demonstration
@@ -48,15 +48,16 @@ Part นี้พาตั้งโปรเจกต์ TypeScript แบบเ
 
 - ตั้งค่าโปรเจกต์ให้เป็นระบบ + `.env`/`.env.example`/`.gitignore`
 - `initChatModel("ชื่อ model", { modelProvider })` สร้าง model ด้วย interface เดียวกันทุก provider
+- gateway ที่ใช้รูปแบบเดียวกับ OpenAI (เช่น TokenMe): ใช้ `modelProvider: "openai"` แล้วชี้ `configuration: { baseURL }` ไปที่ gateway นั้น
 - `try/catch` + แยกประเภท error จาก HTTP status
 
 ## 6. Visual Explanation
 
 ```mermaid
 flowchart LR
-  ENV[".env<br/>GROQ_API_KEY=…"] -->|process.env| CODE["ไฟล์ .ts"]
+  ENV[".env<br/>TOKENME_API_KEY=…"] -->|process.env| CODE["ไฟล์ .ts"]
   CODE -->|initChatModel| MODEL["Chat Model instance"]
-  MODEL -->|invoke(prompt)| API["Provider API (Groq)"]
+  MODEL -->|invoke(prompt)| API["Provider API (TokenMe)"]
   API -->|AIMessage| CODE
 ```
 
@@ -81,7 +82,7 @@ flowchart LR
 ```bash
 mkdir my-langchain && cd my-langchain
 pnpm init
-pnpm add langchain @langchain/core @langchain/groq zod
+pnpm add langchain @langchain/core @langchain/openai zod
 pnpm add -D typescript tsx @types/node
 ```
 
@@ -98,11 +99,12 @@ Node.js: v26.13.1
 
 ### 02-02 Read Environment Variables — อ่าน key โดยไม่เปิดเผยค่า
 ```
+TOKENME_API_KEY: ตั้งค่าแล้ว (ยาว 64 ตัวอักษร)
 GROQ_API_KEY: ตั้งค่าแล้ว (ยาว 56 ตัวอักษร)
 DEEPSEEK_API_KEY: ตั้งค่าแล้ว (ยาว 35 ตัวอักษร)
 GOOGLE_API_KEY: ตั้งค่าแล้ว (ยาว 53 ตัวอักษร)
 
-requireEnv('GROQ_API_KEY') ผ่าน — ได้ค่ามาแล้ว (ไม่แสดงค่า, ยาว 56 ตัวอักษร)
+requireEnv('TOKENME_API_KEY') ผ่าน — ได้ค่ามาแล้ว (ไม่แสดงค่า, ยาว 64 ตัวอักษร)
 ```
 
 ### 02-03 Initialize Chat Model — สร้าง instance (ยังไม่เรียก API)
@@ -117,21 +119,29 @@ Input: ข้อความ · Process: `await model.invoke(...)` · Output: `A
 ```
 กำลังเรียก model...
 AIMessage {
-  "content": "ฉันคือ ChatGPT โมเดล AI ที่ช่วยตอบคำถามและให้ข้อมูลต่าง ๆ ได้อย่างรวดเร็วและแม่นยำ.",
-  "response_metadata": { "finish_reason": "stop", "model": "openai/gpt-oss-20b", … },
+  "content": "ฉันเป็นผู้ช่วย AI ที่พร้อมให้ข้อมูลและช่วยงานคุณอย่างกระชับและเป็นกันเอง",
+  "response_metadata": { "finish_reason": "stop", "model_name": "deepseek-ai/deepseek-v4.1-flash-1017", … },
   "tool_calls": [],
-  "usage_metadata": { "input_tokens": 88, "output_tokens": 129, "total_tokens": 217 }
+  "usage_metadata": { "input_tokens": 46, "output_tokens": 137, "total_tokens": 183, "output_token_details": { "reasoning": 114 } }
 }
 ```
+สังเกต: output token มากกว่าคำตอบที่เห็นเพราะโมเดลเป็น reasoning model — token ที่ใช้ "คิด" ก่อนตอบ (`reasoning`) ถูกนับรวมด้วย
 
 ### 02-05 Read AI Response — อ่านแต่ละส่วนของ AIMessage
 ```
 ชนิดของ content: string
-content: ภูเขาที่สูงที่สุดในประเทศไทยคือ ดอยอินทนนท์ (2,565 เมตร)
-usage_metadata: { input_tokens: 85, output_tokens: 85, total_tokens: 170 }
+content: ดอยอินทนนท์ จังหวัดเชียงใหม่ สูงประมาณ 2,565 เมตร
+usage_metadata: {
+  output_tokens: 69,
+  input_tokens: 44,
+  total_tokens: 113,
+  input_token_details: { audio: undefined, cache_read: 0 },
+  output_token_details: { audio: undefined, reasoning: 45 }
+}
 finish_reason: stop
-model: openai/gpt-oss-20b
+model: deepseek-ai/deepseek-v4.1-flash-1017
 ```
+(ชื่อ field ของชื่อ model ต่างกันตาม provider — `model_name` กับ TokenMe, `model` กับ Groq — จึงอ่านทั้งสองแบบ)
 
 ### 02-06 Basic Error Handling — ทำให้พังจริง 3 แบบ + จำลอง 2 แบบ
 ```
@@ -141,14 +151,14 @@ model: openai/gpt-oss-20b
 [Rate limit] ❌ เรียกถี่เกินไป (429 rate limit) — รอแล้วลองใหม่ (retry + backoff)
 [ยอดเงินไม่พอ] ❌ ยอดเงิน/โควตาไม่พอ (402) — เติมเงินหรือเปลี่ยน provider
 ```
-(429 และ 402 เป็นการจำลอง เพราะทำซ้ำได้ยากและอาจเสียเงิน — ผลลัพธ์ที่เห็นตรวจกับ Groq `openai/gpt-oss-20b`; ข้อความจาก LLM อาจต่างกันในแต่ละครั้ง)
+(429 และ 402 เป็นการจำลอง เพราะทำซ้ำได้ยากและอาจเสียเงิน — ผลลัพธ์ที่เห็นตรวจกับ TokenMe `deepseek-ai/deepseek-v4.1-flash-1017`; ข้อความจาก LLM อาจต่างกันในแต่ละครั้ง)
 
 ## 8. Common Mistakes
 
 | ข้อผิดพลาด | สาเหตุ | วิธีตรวจ/แก้ |
 |---|---|---|
 | `Cannot use import statement outside a module` | ไม่มี `"type": "module"` | เพิ่มใน `package.json` |
-| `Missing env var GROQ_API_KEY` | ไม่มี `.env` หรือชื่อผิด | `cp .env.example .env`, เช็กการสะกด, ไม่มีเว้นวรรครอบ `=` |
+| `Missing env var TOKENME_API_KEY` | ไม่มี `.env` หรือชื่อผิด | `cp .env.example .env`, เช็กการสะกด, ไม่มีเว้นวรรครอบ `=` |
 | ลืม `await` แล้วได้ `Promise { <pending> }` | `invoke` เป็น async | ใส่ `await` |
 | 401 | key ผิด/หมดอายุ/มีช่องว่างปน | สร้าง key ใหม่ |
 | 404 ที่ model | ชื่อ model ผิด | เทียบกับรายชื่อของ provider |

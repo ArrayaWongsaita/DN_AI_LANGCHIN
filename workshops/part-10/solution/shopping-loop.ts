@@ -1,5 +1,5 @@
 // Workshop 10 — เฉลย: Shopping agent ที่ใช้ loop เอง (searchProduct + add + multiply)
-// ใช้: pnpm exec tsx --env-file=.env workshops/part-10/solution/shopping-loop.ts "<คำสั่งซื้อ>" [groq|deepseek]
+// ใช้: pnpm exec tsx --env-file=.env workshops/part-10/solution/shopping-loop.ts "<คำสั่งซื้อ>" [tokenme|groq|deepseek]
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
 import { runAgentLoop } from "../../../src/agents/agent-loop.js";
 import { createChatModel, type ProviderName } from "../../../src/models/index.js";
@@ -29,8 +29,8 @@ export async function shop(question: string, provider?: ProviderName) {
 
 if (isMain(import.meta.url)) {
   const [question, provider] = process.argv.slice(2);
-  if (!question || (provider && provider !== "groq" && provider !== "deepseek")) {
-    console.log('วิธีใช้: shopping-loop.ts "<คำสั่งซื้อ>" [groq|deepseek]');
+  if (!question || (provider && provider !== "tokenme" && provider !== "groq" && provider !== "deepseek")) {
+    console.log('วิธีใช้: shopping-loop.ts "<คำสั่งซื้อ>" [tokenme|groq|deepseek]');
     process.exit(1);
   }
   try {

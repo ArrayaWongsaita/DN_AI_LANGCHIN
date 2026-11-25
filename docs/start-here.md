@@ -8,7 +8,7 @@
 |---|---|---|
 | Node.js 20+ และ pnpm | Part 02 | `pnpm install` |
 | `TOKENME_API_KEY` | Part 03 | `cp .env.example .env` แล้วใส่ key (provider หลัก) |
-| `GROQ_API_KEY` (ฟรี) | Part 02 | ใช้ใน Part 02 ที่เรียก Groq ตรงๆ และเป็นตัวสำรอง |
+| `GROQ_API_KEY` (ฟรี, ไม่บังคับ) | Part 03, 06, 11 | ใช้เทียบ provider และเป็นตัวสำรอง |
 | `DEEPSEEK_API_KEY` (ไม่บังคับ) | Part 03 | สำหรับสลับ provider |
 | Docker | Part 12 | `pnpm db:up` (PostgreSQL + pgvector พอร์ต 5435) |
 | `GOOGLE_API_KEY` (ฟรี) | Part 14 | Gemini embeddings |

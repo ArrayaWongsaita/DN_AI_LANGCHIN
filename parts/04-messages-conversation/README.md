@@ -92,6 +92,8 @@ After :  invoke([system, h1, ai1, human2])   → รู้ชื่อ
 
 รัน `pnpm play 4-N` ผลลัพธ์ด้านล่างเป็น *ตัวอย่างผลลัพธ์ — LLM ไม่ได้ตอบเหมือนเดิมทุกครั้ง* (ตรวจกับ Groq `openai/gpt-oss-20b`)
 
+> **หมายเหตุ provider:** ค่าเริ่มต้นของ repo ตอนนี้คือ **TokenMe** (`TOKENME_API_KEY`) — ทุกตัวอย่างถูกรันซ้ำบน TokenMe แล้วผ่าน แต่ข้อความ/ตัวเลข token/เวลาที่แสดงด้านล่างบันทึกไว้จากการรันบน Groq จึงจะไม่ตรงกับที่คุณเห็นเป๊ะ (ไม่ใช่ข้อผิดพลาด)
+
 ### 04-01 HumanMessage — สร้าง HumanMessage, ส่งเป็น array, ดูโครงสร้าง multimodal
 ```
 type: human

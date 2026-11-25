@@ -14,7 +14,7 @@ requireLangSmith();
 const client = new Client();
 await uploadDataset(client, DATASET_NAME, EXAMPLE_CASES); // มีอยู่แล้วก็ข้าม
 
-const agentModel = await createEvalModel(); // EVAL_PROVIDER=deepseek เพื่อใช้ DeepSeek แทน Groq
+const agentModel = await createEvalModel(); // EVAL_PROVIDER=deepseek เพื่อใช้ DeepSeek แทน TokenMe (ค่าเริ่มต้น)
 const judgeModel = await createChatModel({ provider: "deepseek", thinking: false, maxTokens: 400 }); // judge คนละ model กับตัวที่ถูกตรวจ ลด bias
 const target = createAgentRunner(agentModel, { pauseMs: 6000 });
 

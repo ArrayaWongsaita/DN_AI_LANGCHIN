@@ -6,7 +6,7 @@
 สร้างโปรแกรม Terminal ที่ถามคำถามจากผู้ใช้ แล้วแสดงคำตอบจาก AI
 
 ## Requirements
-1. ใช้ `initChatModel` กับ Groq `openai/gpt-oss-20b`
+1. ใช้ `initChatModel` กับ TokenMe (`modelProvider: "openai"` + `baseURL`)
 2. อ่านคำถามจาก Terminal (`node:readline/promises`)
 3. อ่าน key จาก `.env` ผ่าน `requireEnv`
 4. ถ้าเรียก AI ไม่สำเร็จ ต้องแสดงสาเหตุ (ไม่ crash ด้วย stack trace)

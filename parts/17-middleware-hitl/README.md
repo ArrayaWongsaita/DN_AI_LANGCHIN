@@ -1,8 +1,8 @@
 # Part 17 — Agent Middleware & Human-in-the-Loop
 
 ระดับ: Advanced · เวลา: 120 นาที · ตัวอย่าง: `examples/part-17/` · โค้ดที่ใช้ซ้ำ: `src/middleware/`, `src/data/tasks.ts` · Workshop: `workshops/part-17/`
-ต้องมี `GROQ_API_KEY` (ทุกตัวอย่าง) · 17-07, 17-09 ใช้ `DEEPSEEK_API_KEY` ด้วย · 17-12 ต้อง `pnpm db:up` (Postgres)
-ข้อมูลงานเป็น in-memory จำลอง (`TaskStore`) — ไม่มี side effect จริง · ตัวอย่างทั้งหมดรันจริงบน Groq `openai/gpt-oss-20b` (ตัวที่ระบุใช้ DeepSeek) ผลลัพธ์ที่วางไว้คือ "ตัวอย่างผลลัพธ์ — LLM ไม่ได้ตอบเหมือนเดิมทุกครั้ง"
+ต้องมี `TOKENME_API_KEY` (ทุกตัวอย่าง) · 17-07, 17-09 ใช้ `DEEPSEEK_API_KEY` ด้วย · 17-12 ต้อง `pnpm db:up` (Postgres)
+ข้อมูลงานเป็น in-memory จำลอง (`TaskStore`) — ไม่มี side effect จริง · ตัวอย่างทั้งหมดรันซ้ำบน TokenMe แล้วผ่าน (ผลที่วางไว้บางส่วนบันทึกจาก Groq `openai/gpt-oss-20b`; ตัวที่ระบุใช้ DeepSeek) ผลลัพธ์ที่วางไว้คือ "ตัวอย่างผลลัพธ์ — LLM ไม่ได้ตอบเหมือนเดิมทุกครั้ง"
 
 ## 1. Introduction
 
@@ -104,7 +104,7 @@ beforeAgent ─► ┌─► beforeModel ─► wrapModelCall(model) ─► afte
 
 ## 7. Coding Examples
 
-รัน: `pnpm play 17-N` (ห่างกัน ≥ 8 วินาที เพราะ Groq free tier)
+รัน: `pnpm play 17-N` (ถ้าสลับไปใช้ Groq free tier ให้เว้นห่าง ≥ 8 วินาที)
 
 ### 17-01 Basic Middleware
 - **Input:** "ฉันมีงานอะไรบ้าง" · **Process:** middleware ตัวเดียวพิมพ์ทุก hook · **Output:** ลำดับ lifecycle
@@ -167,10 +167,10 @@ Audit log:
 (ในตัวอย่างนี้ยังไม่ได้กรอง tool จึงบอกความสามารถครบ — ดู 17-08)
 
 ### 17-07 Dynamic Model Selection
-- เลือก model ต่อรอบจากความยาวข้อความ: สั้น → Groq, ยาว → DeepSeek (`thinking: false`)
+- เลือก model ต่อรอบจากความยาวข้อความ: สั้น → TokenMe, ยาว → DeepSeek (`thinking: false`)
 ```
 ถาม: มีงานกี่งาน
-  [ModelRouter] ข้อความรวม 11 ตัวอักษร → groq (ตัวเร็ว)
+  [ModelRouter] ข้อความรวม 11 ตัวอักษร → tokenme (ตัวเร็ว)
 ถาม: ช่วยดูงานทั้งหมดของฉันแล้ววิเคราะห์ว่างานไหนควรทำก่อน …
   [ModelRouter] ข้อความรวม 240 ตัวอักษร → deepseek (ตัวแรง)
 ```

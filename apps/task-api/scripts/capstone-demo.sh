@@ -25,6 +25,6 @@ echo; echo "▶ ลบงานประชุมทีม (ต้องรอ�
 AID=$(curl -s -X POST "$BASE/conversations/$CONV/chat" -H "$A" -H "$J" -d '{"message":"ลบงานประชุมทีม"}' | js '.approval?o.approval.id:""')
 if [ -n "$AID" ]; then echo; echo "▶ approve"; curl -s -X POST "$BASE/conversations/$CONV/approvals/$AID" -H "$A" -H "$J" -d '{"decision":"approve"}' | js .reply; fi
 echo; echo "▶ knowledge base (Gemini embeddings จริง)"
-curl -s -X POST "$BASE/documents" -H "$A" -H "$J" -d '{"title":"คู่มือ deploy","filename":"deploy.md","content":"# ขั้นตอน deploy\n\nก่อน deploy ต้องให้เพื่อนร่วมทีมอย่างน้อยหนึ่งคนทำ code review แล้วรัน migration บน staging ก่อนเสมอ หลัง deploy ต้องตรวจ health check ภายใน 10 นาที ถ้าล้มเหลวให้ rollback ทันทีด้วยคำสั่ง rollback.sh"}' | js '"upload: chunks="+o.chunks'
+curl -s -X POST "$BASE/documents" -H "$A" -H "$J" -d '{"title":"คู่มือ deploy","filename":"deploy.md","content":"# ขั้นตอน deploy\n\nก่อน deploy ต้องให้เพื่อนร่วมทีมอย่างน้อยหนึ่งคนทำ code review แล้วรัน migration บน staging ก่อนเสมอ หลัง deploy ต้องตรวจ health check ภายใน 10 นาที ถ้าล้มเหลวให้ rollback ทันทีด้วยคำสั่ง rollback.sh"}' | js '.chunks+" chunk — upload ok (title="+o.title+")"'
 say 'ขั้นตอน deploy ของทีมเป็นอย่างไร ตอบพร้อมอ้างอิงแหล่งที่มา'
 say 'ราคาหุ้น Tesla วันนี้เท่าไร ค้นจากเอกสารของฉัน'

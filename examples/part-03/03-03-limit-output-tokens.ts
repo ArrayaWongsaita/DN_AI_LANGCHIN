@@ -1,26 +1,26 @@
 // 03-03: Limit Output Tokens
 // แนวคิด: maxTokens จำกัดความยาวคำตอบ — ถ้าถึงเพดาน finish_reason จะเป็น "length" และคำตอบอาจถูกตัด
-// ข้อควรระวัง: reasoning model (เช่น gpt-oss) ใช้ token "คิด" ก่อนตอบ ถ้าตั้งต่ำเกินไปอาจไม่เหลือที่ให้คำตอบเลย
+// ข้อควรระวัง: reasoning model ใช้ token "คิด" ก่อนตอบ ถ้าตั้งต่ำเกินไปอาจไม่เหลือที่ให้คำตอบเลย
 import { createChatModel } from "../../src/models/index.js";
 import { messageText } from "../../src/utils/text.js";
 
 const prompt = "เล่าประวัติกรุงเทพมหานครโดยสรุป";
 
-// (ก) ปัญหา: reasoning effort ระดับปานกลาง + maxTokens ต่ำ → token หมดไปกับการคิด ได้คำตอบว่าง
-// (ข) วิธีแก้: createChatModel ตั้ง reasoningEffort "low" เป็นค่าเริ่มต้นให้ gpt-oss
+// (ก) ปัญหา: เปิดโหมดคิด (ค่าเริ่มต้นของ TokenMe) + maxTokens ต่ำ → token หมดไปกับการคิด ได้คำตอบว่างหรือขาดกลางคัน
+// (ข) วิธีแก้: ปิดโหมดคิดด้วย thinking: false (createChatModel ส่ง option เฉพาะ provider ให้) แล้ว token ไปเป็นคำตอบทั้งหมด
 const cases = [
-  { label: "ก) reasoningEffort=high  ", maxTokens: 60, reasoningEffort: "high" as const },
-  { label: "ข) ค่าเริ่มต้น (low)      ", maxTokens: 30, reasoningEffort: undefined },
-  { label: "ข) ค่าเริ่มต้น (low)      ", maxTokens: 300, reasoningEffort: undefined },
-  { label: "ข) ค่าเริ่มต้น (low)      ", maxTokens: 3000, reasoningEffort: undefined },
+  { label: "ก) เปิดโหมดคิด            ", maxTokens: 60, thinking: undefined },
+  { label: "ก) เปิดโหมดคิด            ", maxTokens: 300, thinking: undefined },
+  { label: "ข) ปิดโหมดคิด             ", maxTokens: 30, thinking: false },
+  { label: "ข) ปิดโหมดคิด             ", maxTokens: 300, thinking: false },
 ];
 
-for (const { label, maxTokens, reasoningEffort } of cases) {
-  const model = await createChatModel({ maxTokens, ...(reasoningEffort && { reasoningEffort }) });
+for (const { label, maxTokens, thinking } of cases) {
+  const model = await createChatModel({ maxTokens, ...(thinking === false && { thinking }) });
   const r = await model.invoke(prompt);
   const text = messageText(r);
   console.log(`\n${label} maxTokens=${maxTokens}`);
   console.log("  finish_reason:", r.response_metadata?.finish_reason);
-  console.log("  output_tokens:", r.usage_metadata?.output_tokens);
+  console.log("  output_tokens:", r.usage_metadata?.output_tokens, "| reasoning:", r.usage_metadata?.output_token_details?.reasoning ?? 0);
   console.log("  ความยาวคำตอบ:", text.length, "ตัวอักษร", text.length === 0 ? "(ว่าง! token หมดไปกับการคิด)" : "");
 }

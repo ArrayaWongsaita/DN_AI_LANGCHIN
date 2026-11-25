@@ -86,6 +86,8 @@ flowchart TB
 
 รัน `pnpm play 5-N` ผลลัพธ์คือ *ตัวอย่างผลลัพธ์ — LLM ไม่ได้ตอบเหมือนเดิมทุกครั้ง* (ตรวจกับ Groq `openai/gpt-oss-20b`)
 
+> **หมายเหตุ provider:** ค่าเริ่มต้นของ repo ตอนนี้คือ **TokenMe** (`TOKENME_API_KEY`) — ทุกตัวอย่างถูกรันซ้ำบน TokenMe แล้วผ่าน แต่ข้อความ/ตัวเลข token/เวลาที่แสดงด้านล่างบันทึกไว้จากการรันบน Groq จึงจะไม่ตรงกับที่คุณเห็นเป๊ะ (ไม่ใช่ข้อผิดพลาด)
+
 ### 05-01 Hardcoded Prompt — ดูปัญหา (ผลลัพธ์ในหัวข้อ 4)
 
 ### 05-02 PromptTemplate — `format()` ได้ string, `invoke()` ได้ PromptValue

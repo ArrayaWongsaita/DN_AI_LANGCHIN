@@ -2,11 +2,13 @@
 // แนวคิด: initChatModel() สร้าง Chat Model จาก "ชื่อ model + provider"
 // ยังไม่ได้เรียก model — แค่สร้าง instance (ไม่เสียโควตา)
 import { initChatModel } from "langchain/chat_models/universal";
+import { TOKENME_BASE_URL, TOKENME_MODEL } from "../../src/models/index.js";
 import { requireEnv } from "../../src/utils/env.js";
 
-const model = await initChatModel("openai/gpt-oss-20b", {
-  modelProvider: "groq", // เลือก provider (ต้องติดตั้ง @langchain/groq)
-  apiKey: requireEnv("GROQ_API_KEY"),
+const model = await initChatModel(TOKENME_MODEL, {
+  modelProvider: "openai", // TokenMe ใช้รูปแบบเดียวกับ OpenAI: เลือก provider "openai" แล้วชี้ baseURL มาที่ TokenMe
+  configuration: { baseURL: TOKENME_BASE_URL },
+  apiKey: requireEnv("TOKENME_API_KEY"),
   temperature: 0,
 });
 

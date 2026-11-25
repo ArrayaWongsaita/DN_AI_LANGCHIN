@@ -42,6 +42,7 @@ Unstructured = ข้อความอิสระ · Semi-structured = มี�
 
 | Provider / model | default | functionCalling | jsonSchema | jsonMode |
 |---|---|---|---|---|
+| TokenMe `deepseek-v4.1-flash` (ค่าเริ่มต้นของ repo) | ✅ | ✅ | ✅ | ✅ (ตรวจกับ 06-04 และ eval ของ capstone) |
 | Groq `openai/gpt-oss-20b` | ✅ | ✅ | ✅ | ⚠️ ต้องมีคำว่า "json" ใน prompt |
 | DeepSeek `deepseek-flash` (thinking เปิด — ค่าเริ่มต้น) | ❌ `Thinking mode does not support this tool_choice` | ❌ | ❌ `unavailable` | ⚠️ ต้องมีคำว่า JSON |
 | DeepSeek `deepseek-flash` + **ปิด thinking** (`thinking: false`) | ✅ | ✅ | — | ✅ |
@@ -111,6 +112,8 @@ flowchart LR
 
 รัน `pnpm play 6-N` ผลลัพธ์ที่ให้คือ *ตัวอย่างผลลัพธ์ — LLM ไม่ได้ตอบเหมือนเดิมทุกครั้ง* (ตรวจกับ Groq `openai/gpt-oss-20b`; 06-04 ตรวจกับ DeepSeek ด้วย)
 
+> **หมายเหตุ provider:** ค่าเริ่มต้นของ repo ตอนนี้คือ **TokenMe** (`TOKENME_API_KEY`) — ทุกตัวอย่างถูกรันซ้ำบน TokenMe แล้วผ่าน แต่ข้อความ/ตัวเลข token/เวลาที่แสดงด้านล่างบันทึกไว้จากการรันบน Groq จึงจะไม่ตรงกับที่คุณเห็นเป๊ะ (ไม่ใช่ข้อผิดพลาด)
+
 - **06-01 Unstructured Response, 06-02 JSON Output Problem:** ดูหัวข้อ 4
 
 ### 06-03 Basic Zod Schema (ไม่เรียก LLM)
@@ -126,7 +129,8 @@ parse() throw: ZodError
 
 ### 06-04 withStructuredOutput()
 ```
-[groq] { name: 'เสื้อ', price: 350, sizes: [ 'M', 'L' ] } | typeof price = number
+[tokenme] { name: 'เสื้อสีดำ', price: 350, sizes: [ 'M', 'L' ] } | typeof price = number
+[groq] { name: 'เสื้อสีดำ', price: 350, sizes: [ 'M', 'L' ] } | typeof price = number
 [deepseek] { name: 'เสื้อ', price: 350, sizes: [ 'M', 'L' ] } | typeof price = number
 ```
 
@@ -210,7 +214,7 @@ parse() throw: ZodError
 
 **Basic:** เพิ่ม field `brand` (nullable) ใน 06-04 แล้วลองข้อความที่ไม่มียี่ห้อ
 **Intermediate:** แก้ 06-05 ให้เพิ่ม intent `shipping_question` และทดสอบกับ 3 ข้อความใหม่
-**Challenge:** เขียน `extractWithFallback()` ที่ลอง Groq ก่อน ถ้าล้มเหลวสองครั้งสลับไป DeepSeek (`thinking: false`)
+**Challenge:** เขียน `extractWithFallback()` ที่ลอง TokenMe ก่อน ถ้าล้มเหลวสองครั้งสลับไป Groq หรือ DeepSeek (`thinking: false`)
 
 ## 11. Workshop
 

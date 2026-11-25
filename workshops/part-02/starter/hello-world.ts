@@ -6,7 +6,8 @@ import { initChatModel } from "langchain/chat_models/universal";
 import { requireEnv } from "../../../src/utils/env.js";
 import { messageText } from "../../../src/utils/text.js";
 
-// TODO 1: สร้าง model ด้วย initChatModel("openai/gpt-oss-20b", { modelProvider: "groq", apiKey: requireEnv("GROQ_API_KEY") })
+// TODO 1: สร้าง model ด้วย initChatModel(TOKENME_MODEL, { modelProvider: "openai", configuration: { baseURL: TOKENME_BASE_URL }, apiKey: requireEnv("TOKENME_API_KEY") })
+//         (TOKENME_MODEL, TOKENME_BASE_URL import จาก "../../../src/models/index.js")
 // TODO 2: อ่านคำถามจาก Terminal ด้วย createInterface + rl.question  (ถ้าว่าง → แจ้งแล้ว process.exit(0))
 // TODO 3: เรียก model.invoke(question) แล้วแสดง messageText(response)
 // TODO 4: ครอบด้วย try/catch — ถ้าล้มให้แสดงสาเหตุ (HTTP status) แทน stack trace แล้ว process.exit(1)

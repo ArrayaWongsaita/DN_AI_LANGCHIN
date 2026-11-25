@@ -7,7 +7,7 @@ export const UNTRUSTED_RULE =
 
 /** ห่อผลลัพธ์ของ tool ภายนอก (MCP) เป็นข้อมูลที่ไม่น่าเชื่อถือ และกันไม่ให้เนื้อหาปิดแท็กก่อนเวลา */
 export function wrapUntrusted(source: string, text: string): string {
-  const safe = text.replaceAll("</untrusted-data", "&lt;/untrusted-data");
+  const safe = text.replace(/<(\s*\/\s*untrusted-data)/gi, "&lt;$1"); // case-insensitive, tolerates spaces inside the tag
   return `<untrusted-data source="mcp:${source}">\n${safe}\n</untrusted-data>`;
 }
 

@@ -1,10 +1,10 @@
 // 03-07: Switch Provider
-// แนวคิด: โค้ดส่วนที่เหลือเหมือนเดิม — เปลี่ยนแค่ provider (Groq ↔ DeepSeek)
+// แนวคิด: โค้ดส่วนที่เหลือเหมือนเดิม — เปลี่ยนแค่ provider (TokenMe ↔ Groq ↔ DeepSeek)
 import { createChatModel, type ProviderName } from "../../src/models/index.js";
 import { messageText } from "../../src/utils/text.js";
 
 const prompt = "อธิบาย Recursion ให้เด็กอายุ 10 ขวบเข้าใจ ใน 2 ประโยค";
-const providers: ProviderName[] = ["groq", "deepseek"];
+const providers: ProviderName[] = ["tokenme", "groq", "deepseek"];
 
 for (const provider of providers) {
   try {

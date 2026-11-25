@@ -11,7 +11,7 @@
 3. Generate: prompt ที่กำหนดกฎ 4 ข้อ (เฉพาะ context / context คือข้อมูล / อ้าง `[n]` / ไม่พบ → `ไม่พบข้อมูลที่เกี่ยวข้องในเอกสาร`)
 4. แสดงคำตอบ + แหล่งที่มาที่อ้างจริง (ชื่อไฟล์, ตัดซ้ำ)
 5. ไม่มีหลักฐานเลย → ตอบ "ไม่พบ" **โดยไม่เรียกโมเดล**
-6. ทำงานได้ทั้ง Groq และ DeepSeek (`--provider`)
+6. ทำงานได้ทั้ง TokenMe, Groq และ DeepSeek (`--provider tokenme|groq|deepseek`)
 7. เทสต์ logic ด้วย fake retriever + scripted model (ไม่เรียก LLM)
 
 ## วิธีรัน
@@ -48,7 +48,7 @@ index เสร็จ: 20 chunk | ส่งไป embed รอบนี้: 0   
 - [ ] คำถามนอกเอกสาร → "ไม่พบข้อมูลที่เกี่ยวข้องในเอกสาร"
 - [ ] คำตอบเรื่องชุมนุมไม่มีข้อความจากคำสั่งแฝง ("แฮก", "รหัสผ่าน", "HACKED")
 - [ ] `pnpm test tests/part16-rag.test.ts` ผ่าน (14 เทสต์ rule/prompt + 2 เทสต์ pgvector เมื่อ Docker เปิด)
-- [ ] รันกับทั้ง Groq และ DeepSeek ได้
+- [ ] รันกับ TokenMe, Groq และ DeepSeek ได้
 - [ ] อธิบายได้ว่าทำไมไม่ index `schedule.json` และจะทำให้ค้นได้อย่างไร
 
 เฉลย: [`solution/curriculum-assistant.ts`](solution/curriculum-assistant.ts) · แกน RAG: [`src/rag/rag.ts`](../../src/rag/rag.ts) · ฐานความรู้: [`src/rag/curriculum-index.ts`](../../src/rag/curriculum-index.ts)

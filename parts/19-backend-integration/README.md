@@ -2,7 +2,7 @@
 
 ระดับ: Advanced · เวลา: 120–150 นาที · โค้ดทั้งหมดอยู่ที่ [`apps/task-api/`](../../apps/task-api/) (NestJS 12 + Prisma 7 + PostgreSQL) · tag `part-19-01` … `part-19-15`
 ต่างจาก Part อื่น Part นี้ **ไม่มี `pnpm play`** — ตัวอย่างคือโมดูลของแอปจริง แต่ละโมดูลมี git tag (`git checkout part-19-05` เพื่อดูสถานะ ณ โมดูลนั้น) และ spec (`pnpm --filter task-api test`) เป็นหลักฐานว่าทำงาน
-ผลลัพธ์ที่เรียก model รันจริงบน DeepSeek (Groq โควตารายวัน 200,000 token หมดตอนทำ Part นี้) — LLM ไม่ได้ตอบเหมือนเดิมทุกครั้ง
+ผลลัพธ์ที่เรียก model บันทึกจากการรันบน DeepSeek (Groq โควตารายวันหมดตอนทำ Part นี้) — ค่าเริ่มต้นตอนนี้คือ TokenMe และรันซ้ำผ่านแล้ว — LLM ไม่ได้ตอบเหมือนเดิมทุกครั้ง
 
 ## 1. Introduction
 
@@ -99,7 +99,7 @@ src/
 export const CHAT_MODEL = Symbol("CHAT_MODEL");
 export const chatModelProvider: Provider = {
   provide: CHAT_MODEL,
-  useFactory: async () => createChatModel({ provider: process.env.AI_PROVIDER ?? "groq", maxTokens: 1500, ...(deepseek ? { thinking: false } : {}) }),
+  useFactory: async () => createChatModel(chatModelOptions((process.env.AI_PROVIDER as ProviderName | undefined) ?? "tokenme")), // tokenme/deepseek ปิด thinking
 };
 ```
 เทสต์ `overrideProvider(CHAT_MODEL).useFactory(() => scriptedModel)` → ทดสอบ HTTP ทั้งเส้นได้โดยไม่เรียก API

@@ -67,7 +67,7 @@ hallucinate ได้, คำตอบไม่ deterministic, เรียก f
 
 ## 4. Problem Demonstration
 
-ตัวอย่าง **01-02** เรียก Groq ด้วย `fetch` ล้วนๆ ไม่ใช้ library:
+ตัวอย่าง **01-02** เรียก TokenMe (gateway ที่ใช้รูปแบบ request เดียวกับ OpenAI) ด้วย `fetch` ล้วนๆ ไม่ใช้ library:
 
 ```bash
 pnpm play 1-2
@@ -143,37 +143,48 @@ flowchart TB
 
 ## 7. Coding Examples
 
-รันด้วย `pnpm play <part>-<example>` (ต้องมี `.env` ที่ตั้ง `GROQ_API_KEY`; 01-03 ใช้ `DEEPSEEK_API_KEY` ด้วย)
-ผลลัพธ์ด้านล่างเป็น *ตัวอย่างผลลัพธ์ — LLM ไม่ได้ตอบเหมือนเดิมทุกครั้ง* (ตรวจกับ Groq `openai/gpt-oss-20b` และ DeepSeek `deepseek-flash`)
+รันด้วย `pnpm play <part>-<example>` (ต้องมี `.env` ที่ตั้ง `TOKENME_API_KEY`; 01-03 เทียบ provider เพิ่มด้วย `GROQ_API_KEY` และ `DEEPSEEK_API_KEY` — ตัวไหนไม่มี key จะถูกข้าม)
+ผลลัพธ์ด้านล่างเป็น *ตัวอย่างผลลัพธ์ — LLM ไม่ได้ตอบเหมือนเดิมทุกครั้ง* (ตรวจกับ TokenMe `deepseek-ai/deepseek-v4.1-flash-1017`, Groq `openai/gpt-oss-20b` และ DeepSeek `deepseek-flash`)
 
 ### 01-01 Basic LLM Input and Output
 - **Input:** ข้อความ "อธิบาย LLM ใน 1 ประโยค" · **Process:** `model.invoke()` · **Output:** ข้อความ + จำนวน token
 
 ```
 INPUT : อธิบาย LLM ใน 1 ประโยค
-OUTPUT: LLM คือโมเดลภาษาใหญ่ที่ใช้การเรียนรู้ลึกเพื่อสร้างและเข้าใจข้อความตามบริบทอย่างมีประสิทธิภาพ.
-TOKENS: { input_tokens: 83, output_tokens: 115, total_tokens: 198 }
+OUTPUT: LLM (Large Language Model) คือแบบจำลอง AI ขนาดใหญ่ที่เรียนรู้จากข้อความจำนวนมหาศาลเพื่อเข้าใจและสร้างภาษาได้อย่างเป็นธรรมชาติ เช่น ใช้ตอบคำถาม สรุป หรือเขียนเนื้อหา
+TOKENS: {
+  output_tokens: 155,
+  input_tokens: 41,
+  total_tokens: 196,
+  input_token_details: { audio: undefined, cache_read: 0 },
+  output_token_details: { audio: undefined, reasoning: 106 }
+}
 ```
-สังเกต: output token (115) มากกว่าคำตอบที่เห็นมาก เพราะ gpt-oss เป็น reasoning model ที่ "คิด" ก่อนตอบและนับ token ส่วนนั้นด้วย
+สังเกต: output token (155) มากกว่าคำตอบที่เห็นมาก เพราะโมเดลเป็น reasoning model ที่ "คิด" ก่อนตอบ (reasoning 106 token) และนับ token ส่วนนั้นด้วย
 
 ### 01-02 Direct Model API Concept
-- เรียก Groq ด้วย `fetch` — ดู "ภาระ" ที่ต้องจัดการเอง
+- เรียก TokenMe ด้วย `fetch` — ดู "ภาระ" ที่ต้องจัดการเอง
 
 ```
-ANSWER: LLM (Large Language Model) คือโมเดลแมชชีนเลิร์นนิ่งขนาดใหญ่ที่ฝึกด้วยข้อมูลข้อความจำนวนมหาศาลเพื่อสร้างและเข้าใจภาษาอย่างคล้ายมนุษย์.
-FINISH: stop | total tokens: 245
+ANSWER: LLM (Large Language Model) คือโมเดล AI ขนาดใหญ่ที่เรียนรู้รูปแบบภาษาจากข้อความจำนวนมหาศาล เพื่อทำนายคำถัดไปและสร้างข้อความที่ต่อเนื่องได้ เช่น ตอบคำถาม เขียนเนื้อหา หรือสรุปข้อมูล
+FINISH: stop | total tokens: 213
 ```
 
 ### 01-03 Direct API vs LangChain Concept
-- ถามคำถามเดียวกันกับ 2 provider ทั้งสองวิธี
+- ถามคำถามเดียวกันกับหลาย provider ทั้งสองวิธี
 
 ```
+
+=== tokenme ===
+Direct   : กรุงเทพมหานคร (กรุงเทพฯ)
+LangChain: กรุงเทพมหานคร
+
 === groq ===
-Direct   : กรุงเทพฯ
-LangChain: กรุงเทพฯ (Bangkok)
+Direct   : กรุงเทพมหานคร (Bangkok)
+LangChain: กรุงเทพฯ
 
 === deepseek ===
-Direct   : กรุงเทพมหานคร (กรุงเทพฯ)
+Direct   : กรุงเทพมหานคร
 LangChain: กรุงเทพมหานคร
 ```
 
@@ -185,7 +196,7 @@ LangChain: กรุงเทพมหานคร
 | เชื่อคำตอบทุกอย่าง | Hallucination | ให้ข้อมูลอ้างอิง (RAG, Part 16) และตรวจผลลัพธ์ |
 | ใช้ LangChain กับงานเล็กมาก | ไม่ประเมินความจำเป็น | ถ้าเรียกครั้งเดียวกับ provider เดียว ใช้ SDK/fetch ตรงๆ ก็พอ |
 | เอา API key ใส่ในโค้ด | สะดวกชั่วคราว | เก็บใน `.env` และใส่ `.gitignore` (Part 02) |
-| error `Missing env var GROQ_API_KEY` | ยังไม่ได้สร้าง `.env` | `cp .env.example .env` แล้วใส่ key |
+| error `Missing env var TOKENME_API_KEY` | ยังไม่ได้สร้าง `.env` | `cp .env.example .env` แล้วใส่ key |
 
 ## 9. Best Practices
 

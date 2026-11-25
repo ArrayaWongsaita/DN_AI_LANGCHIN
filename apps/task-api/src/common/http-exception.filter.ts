@@ -1,6 +1,6 @@
 import { type ArgumentsHost, Catch, type ExceptionFilter, HttpException, Logger } from "@nestjs/common";
 import type { Response } from "express";
-import { classifyError } from "./public-error.js";
+import { classifyError, localizeMessage } from "./public-error.js";
 import { RateLimitedException } from "./rate-limit.js";
 
 /** ทุก error ออกเป็น `{ statusCode, message }` ภาษาไทย — error ที่ไม่รู้จักถูก log ฝั่งเซิร์ฟเวอร์และตอบข้อความกลาง */
@@ -24,6 +24,6 @@ export class AllExceptionsFilter implements ExceptionFilter {
       ({ status: statusCode, message } = classifyError(exception));
       this.logger.error(exception instanceof Error ? (exception.stack ?? exception.message) : String(exception));
     }
-    res.status(statusCode).json({ statusCode, message });
+    res.status(statusCode).json({ statusCode, message: localizeMessage(statusCode, message) });
   }
 }

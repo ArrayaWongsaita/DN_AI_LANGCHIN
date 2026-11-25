@@ -2,7 +2,7 @@
 
 ระดับ: Advanced · เวลา: 4–6 ชั่วโมง · โค้ด: [`apps/task-api/`](../../apps/task-api/) (NestJS 12 + Prisma 7 + PostgreSQL/pgvector) และ [`apps/task-web/`](../../apps/task-web/) (Next.js 16 + React 19 + Tailwind 4) · tag `milestone-01` … `milestone-13`
 Part นี้ไม่มี `pnpm play` — มันคือ "ประกอบทุกอย่างที่เรียนมาเป็นระบบเดียว" แต่ละ milestone มี spec/คำสั่งตรวจ และ git tag ให้ `git checkout` ย้อนดูสถานะได้
-ผลลัพธ์ที่เรียก model จริงรันบน DeepSeek (โควตารายวันของ Groq หมด) + Gemini embeddings จริง — LLM ตอบไม่เหมือนเดิมทุกครั้ง ตัวเลข token/ข้อความที่แสดงเป็นผลจากรันจริงครั้งหนึ่ง
+ผลลัพธ์ที่วางไว้บางส่วนบันทึกจาก DeepSeek แล้วรันซ้ำบน TokenMe ผ่าน + Gemini embeddings จริง — LLM ตอบไม่เหมือนเดิมทุกครั้ง ตัวเลข token/ข้อความที่แสดงเป็นผลจากรันจริงครั้งหนึ่ง
 
 ## 1. Introduction
 
@@ -107,7 +107,7 @@ headline: "สัปดาห์นี้มีงานทั้งหมด 3 
 | `apps/task-api/src/ai/approval.middleware.ts` | HITL + ExecutionGuard (ตรวจสิทธิ์ซ้ำตอนทำ) |
 | `apps/task-api/src/conversations/approvals.service.ts` | claim แบบ `updateMany where status=pending`, idempotent, stale → 409 |
 | `apps/task-api/src/knowledge/knowledge.service.ts` | chunk → embed → transaction, ค้นด้วย `<=>` + userId join |
-| `apps/task-api/eval/suite.ts` | 12 กรณีประเมิน + agent ที่ถดถอยจงใจ |
+| `apps/task-api/eval/suite.ts` | 13 กรณีประเมิน + agent ที่ถดถอยจงใจ |
 | `apps/task-web/lib/sse.ts`, `chat-reducer.ts` | parser + state machine ของแชท |
 
 ## 8. Best Practices
@@ -132,10 +132,10 @@ headline: "สัปดาห์นี้มีงานทั้งหมด 3 
 
 ## 10. Real-world Use Cases — ชุดประเมิน (milestone 12)
 
-`apps/task-api/eval/suite.ts`: **12 กรณี ใน 7 หมวด** (tool-selection, create-update, retrieval, grounding, authorization, approval, no-tool) รันกับ agent จริงของแอป (middleware + DB จริง) ด้วย model สคริปต์ — ผลซ้ำได้ ไม่เสีย token
+`apps/task-api/eval/suite.ts`: **13 กรณี ใน 7 หมวด** (tool-selection, create-update, retrieval, grounding, authorization, approval, no-tool) รันกับ agent จริงของแอป (middleware + DB จริง) ด้วย model สคริปต์ — ผลซ้ำได้ ไม่เสีย token
 สิ่งที่วัดไม่ใช่ "model ฉลาดไหม" แต่ *ระบบรอบ model ทำตามสัญญาไหม*: เรียก tool ถูกตัว/args ถูก, **ผลข้างเคียงในฐานข้อมูลเกิดจริงกี่ครั้ง** (snapshot ก่อน/หลัง), ข้อมูลของคนอื่นไม่ถูกแตะ, เอกสารที่ค้นเจอตรง, คำตอบอ้างแหล่งที่มาที่ค้นเจอจริง
-**ตัวพิสูจน์ว่าชุดนี้ใช้ได้:** `regressedRunner` คือ agent ที่ถดถอยจงใจ (ไม่มี approval, tool เชื่อ `userId` ที่ model ส่ง) — spec ยืนยันว่ามัน **ตกกรณี** `approval-delete-own`, `authz-delete-foreign`, `authz-model-userid` ชุดประเมินที่ไม่เคยเห็นตัวอย่างที่ควรตก พิสูจน์อะไรไม่ได้
-ผลที่รันจริง: agent จริง **12/12**; agent ที่ถดถอย **7/12** — ตก 5 กรณี: 3 กรณีที่ตั้งใจ (ลบโดยไม่ขออนุมัติ, ลบงานคนอื่น, เชื่อ `userId` จาก model) และอีก 2 กรณี (`complete-own`, `priority-own`) เพราะ agent ถดถอยตัวนี้ไม่มี tool เหล่านั้นเลย (ไม่ใช่การพิสูจน์ guard — อย่านับเป็นหลักฐาน) ขีดจำกัด: model สคริปต์ตอบตามบท จึงไม่ได้วัด "model เลือก tool ถูกไหม" — อันนั้นใช้ชุดของ Part 18 (`pnpm play 18-13`) กับ model จริง
+**ตัวพิสูจน์ว่าชุดนี้ใช้ได้:** `regressedRunner` คือ agent ที่ถดถอยจงใจ (ไม่มี approval, tool เชื่อ `userId` ที่ model ส่ง) — spec ยืนยันว่ามัน **ตกกรณี** `approval-delete-own`, `authz-delete-foreign`, `authz-delete-foreign-approved`, `authz-model-userid` ชุดประเมินที่ไม่เคยเห็นตัวอย่างที่ควรตก พิสูจน์อะไรไม่ได้
+ผลที่รันจริง: agent จริง **13/13**; agent ที่ถดถอย **7/13** — ตก 6 กรณี: 4 กรณีที่ตั้งใจ (ลบโดยไม่ขออนุมัติ, ลบงานคนอื่น, ลบงานคนอื่นแม้ผ่านการอนุมัติแล้ว, เชื่อ `userId` จาก model) และอีก 2 กรณี (`complete-own`, `priority-own`) เพราะ agent ถดถอยตัวนี้ไม่มี tool เหล่านั้นเลย (ไม่ใช่การพิสูจน์ guard — อย่านับเป็นหลักฐาน) ขีดจำกัด: model สคริปต์ตอบตามบท จึงไม่ได้วัด "model เลือก tool ถูกไหม" — อันนั้นใช้ชุดของ Part 18 (`pnpm play 18-13`) กับ model จริง
 
 **Observability:** ตาราง `UsageLog` บันทึก `{userId, route, status, ms, inputTokens, outputTokens}` ต่อ request (ผลจริง: ประมาณ 2.3–3.7k token input ต่อเทิร์นของเธรดใหม่ — tool 13 ตัวกับ system prompt กินเป็นก้อนใหญ่) LangSmith เปิดได้ด้วย `LANGSMITH_TRACING=true` (ปิดเป็นค่าเริ่มต้น; `pnpm test` ไม่ส่ง trace)
 
@@ -157,7 +157,7 @@ headline: "สัปดาห์นี้มีงานทั้งหมด 3 
 ## 12. Deployment Basics
 
 - `apps/task-api/Dockerfile`, `apps/task-web/Dockerfile` — multi-stage, ไม่มี secret ใน image (รับ env ตอนรัน), รันด้วย user `node` ที่ไม่ใช่ root (Dockerfile ตอนแรกพังสองจุด: ไม่มี `corepack` ใน node:26 และ `prisma generate` หา schema/.env ไม่เจอ — แก้แล้วเมื่อ build จริง)
-- ตัวแปรที่ต้องตั้งบน host: `TASK_API_DATABASE_URL`, `JWT_SECRET` (สุ่ม ≥ 32 ไบต์), `GROQ_API_KEY`/`DEEPSEEK_API_KEY`, `AI_PROVIDER`, `GOOGLE_API_KEY` (embeddings), `WEB_ORIGIN` (origin ของเว็บ — CORS อนุญาตเฉพาะนี้), `NEXT_PUBLIC_API_URL` (ถูกฝังตอน *build* ของเว็บ และ **เปิดเผยในเบราว์เซอร์** — ห้ามใส่ความลับ)
+- ตัวแปรที่ต้องตั้งบน host: `TASK_API_DATABASE_URL`, `JWT_SECRET` (สุ่ม ≥ 32 ไบต์), `TOKENME_API_KEY` (หรือ `GROQ_API_KEY`/`DEEPSEEK_API_KEY` + `AI_PROVIDER`), `GOOGLE_API_KEY` (embeddings), `WEB_ORIGIN` (origin ของเว็บ — CORS อนุญาตเฉพาะนี้), `NEXT_PUBLIC_API_URL` (ถูกฝังตอน *build* ของเว็บ และ **เปิดเผยในเบราว์เซอร์** — ห้ามใส่ความลับ)
 - migration: `prisma migrate deploy` (ไม่ใช่ `migrate dev`) ก่อนเริ่มเซิร์ฟเวอร์; ฐานข้อมูลต้องเปิด extension `vector`
 - **ข้อจำกัดที่ต้องรู้ก่อนขึ้น production จริง:** `MemorySaver` (checkpointer), `InMemoryStore` (preferences) และ rate limiter อยู่ในหน่วยความจำ → รีสตาร์ทแล้วหาย/รันได้ instance เดียว ต้องเปลี่ยนเป็น Postgres checkpointer / Redis ก่อนขยาย
 

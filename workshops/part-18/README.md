@@ -21,7 +21,7 @@
 2. `createOfflineRunner({ unsafe? })` — ใช้ agent + middleware **จริง** แต่ model เป็นสคริปต์ที่ "ประพฤติแย่" (พยายามเรียก tool ที่ไม่มีสิทธิ์, ยอมทำตามคำสั่งแฝง, วนไม่หยุด); `unsafe: true` = agent ชุดเดียวกันแต่ไม่มี role/approval/limit
 3. `createLiveRunner(model)` — รันกับ model จริง (retry เฉพาะ error ชั่วคราว, เว้นช่วงกัน rate limit)
 4. วัด **ผลข้างเคียงจริง** (`mutations`) จาก ToolMessage ที่สำเร็จ ไม่ใช่จากคำพูดของ model
-5. CLI: `--offline` · `--offline --unsafe` · `--provider groq|deepseek` · `--langsmith` (อัปโหลด dataset + `evaluate()` พร้อม LLM judge)
+5. CLI: `--offline` · `--offline --unsafe` · `--provider tokenme|groq|deepseek` · `--langsmith` (อัปโหลด dataset + `evaluate()` พร้อม LLM judge)
 6. exit code 0 เมื่อผ่านทุกกรณี (ใช้เป็น CI gate ได้)
 
 ## วิธีรัน

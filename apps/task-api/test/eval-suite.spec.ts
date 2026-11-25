@@ -25,6 +25,7 @@ describe.skipIf(!hasDb)("milestone 12 — offline AI evaluation suite", () => {
     const failed = new Set(report.byCase.filter((r) => !r.passed).map((r) => r.id));
     expect(failed.has("approval-delete-own")).toBe(true); // ลบทันที ไม่หยุดรออนุมัติ
     expect(failed.has("authz-delete-foreign")).toBe(true); // ลบงานของคนอื่นได้จริง
+    expect(failed.has("authz-delete-foreign-approved")).toBe(true); // อนุมัติแล้วลบงานของคนอื่นได้จริง
     expect(failed.has("authz-model-userid")).toBe(true); // เชื่อ userId ที่ model ส่งมา
     expect(report.pass).toBeLessThan(report.total);
   });

@@ -15,7 +15,7 @@
 
 ## วิธีรัน
 ```bash
-pnpm exec tsx --env-file=.env workshops/part-06/solution/product-extractor.ts "เสื้อสีดำราคา 350 บาท มีไซซ์ M และ L"            # Groq (ค่าเริ่มต้น)
+pnpm exec tsx --env-file=.env workshops/part-06/solution/product-extractor.ts "เสื้อสีดำราคา 350 บาท มีไซซ์ M และ L"            # TokenMe (ค่าเริ่มต้น)
 pnpm exec tsx --env-file=.env workshops/part-06/solution/product-extractor.ts "เสื้อสีดำราคา 350 บาท มีไซซ์ M และ L" deepseek   # DeepSeek
 pnpm test tests/part06-schemas.test.ts
 ```
@@ -31,7 +31,7 @@ pnpm test tests/part06-schemas.test.ts
 - [ ] ข้อความตัวอย่างหลักได้ object ตรงตาม schema (`price` เป็น number, `sizes` = `['M','L']`)
 - [ ] สินค้าที่ไม่มีไซซ์ได้ `sizes: []`
 - [ ] `pnpm test tests/part06-schemas.test.ts` ผ่าน (รวมกรณีราคา 0, ไซซ์ซ้ำ/ว่าง, เสื้อผ้าไม่มีไซซ์)
-- [ ] ใช้ได้ทั้ง Groq และ DeepSeek (ทดสอบสลับ provider)
+- [ ] ใช้ได้ทั้ง TokenMe, Groq และ DeepSeek (ทดสอบสลับ provider)
 - [ ] output ผิดรูปแบบถูกจัดการ (retry/throw) ไม่ใช่ crash เงียบๆ
 
 > หมายเหตุจากการทดสอบจริง: ตอนแรก schema บังคับ `sizes` ไม่ว่าง ทำให้ model **แต่งไซซ์** (`['S']`) ให้สินค้าที่ไม่มีไซซ์ — แก้โดยอนุญาต array ว่างและบังคับไซซ์เฉพาะเสื้อผ้า

@@ -13,7 +13,7 @@ export interface ChatModelOptions {
   maxRetries?: number;
   /** เฉพาะ reasoning model ของ Groq (gpt-oss): ยิ่งต่ำยิ่งคิดน้อย เร็วและประหยัด token — ค่าเริ่มต้น "low" */
   reasoningEffort?: "low" | "medium" | "high";
-  /** เฉพาะ DeepSeek: ใส่ false เพื่อปิด thinking mode — จำเป็นเมื่อใช้ structured output / tool calling (Part 06+) */
+  /** DeepSeek/TokenMe: ใส่ false เพื่อปิด thinking mode — จำเป็นเมื่อใช้ structured output / tool calling (Part 06+) */
   thinking?: boolean;
 }
 
@@ -45,6 +45,8 @@ export async function createChatModel(opts: ChatModelOptions = {}): Promise<Base
     ...(effort ? { reasoningEffort: effort } : {}),
     // DeepSeek: thinking mode ไม่รองรับ tool_choice ที่ structured output/tool calling ต้องใช้
     ...(provider === "deepseek" && thinking === false ? { modelKwargs: { thinking: { type: "disabled" } } } : {}),
+    // TokenMe: ปิด reasoning ด้วย chat template (วัดแล้ว 0 token; ส่วน reasoning_effort/thinking ยังใช้ 169–2,400 token และสุ่มมาก)
+    ...(provider === "tokenme" && thinking === false ? { modelKwargs: { chat_template_kwargs: { enable_thinking: false } } } : {}),
     ...rest,
   })) as unknown as BaseChatModel;
 }

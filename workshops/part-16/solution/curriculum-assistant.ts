@@ -33,7 +33,7 @@ if (isMain(import.meta.url)) {
         console.log(`คำถาม: ${question}\nคำตอบ: ${r.answer}`);
         console.log(`แหล่งที่มา: ${r.sources.length ? r.sources.map((s) => `[${s.n}] ${s.source}`).join(", ") : "-"}${r.usedContext ? "" : " (ไม่ได้ใช้เอกสาร)"}`);
       } else {
-        throw new Error('ใช้: curriculum-assistant.ts index [--reset] | curriculum-assistant.ts ask "คำถาม" [--provider groq|deepseek]');
+        throw new Error('ใช้: curriculum-assistant.ts index [--reset] | curriculum-assistant.ts ask "คำถาม" [--provider tokenme|groq|deepseek]');
       }
     });
   } catch (e) {

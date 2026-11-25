@@ -87,6 +87,8 @@ sequenceDiagram
 
 รัน `pnpm play 9-N` — ตรวจกับ Groq `openai/gpt-oss-20b` (09-10 ใช้ DeepSeek `thinking:false`); ผลจาก LLM คือ *ตัวอย่างผลลัพธ์ — LLM ไม่ได้ตอบเหมือนเดิมทุกครั้ง*
 
+> **หมายเหตุ provider:** ค่าเริ่มต้นของ repo ตอนนี้คือ **TokenMe** (`TOKENME_API_KEY`) — ทุกตัวอย่างถูกรันซ้ำบน TokenMe แล้วผ่าน แต่ข้อความ/ตัวเลข token/เวลาที่แสดงด้านล่างบันทึกไว้จากการรันบน Groq จึงจะไม่ตรงกับที่คุณเห็นเป๊ะ (ไม่ใช่ข้อผิดพลาด)
+
 ### 09-01 Normal TypeScript Function / 09-02 Create Calculator Tool (ไม่เรียก LLM)
 ```
 name       : calculator

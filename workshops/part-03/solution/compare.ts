@@ -5,10 +5,11 @@ import { messageText } from "../../../src/utils/text.js";
 const prompt = "แนะนำ 3 เคล็ดลับการเรียนเขียนโปรแกรมสำหรับมือใหม่ ข้อละไม่เกิน 1 ประโยค";
 
 const candidates: { label: string; options: ChatModelOptions }[] = [
-  { label: "groq gpt-oss-20b t=0", options: { temperature: 0 } },
-  { label: "groq gpt-oss-20b t=1", options: { temperature: 1 } },
-  { label: "groq gpt-oss-120b t=0", options: { model: "openai/gpt-oss-120b", temperature: 0 } },
-  { label: "deepseek-flash t=0", options: { provider: "deepseek", temperature: 0 } },
+  { label: "tokenme v4.1-flash t=0", options: { temperature: 0, thinking: false } },
+  { label: "tokenme v4.1-flash t=1", options: { temperature: 1, thinking: false } },
+  { label: "tokenme qwen3.8-27b t=0", options: { model: "unsloth/qwen3.8-27b-nvfp4", temperature: 0, thinking: false } },
+  { label: "groq gpt-oss-20b t=0", options: { provider: "groq", temperature: 0 } },
+  { label: "deepseek-flash t=0", options: { provider: "deepseek", temperature: 0, thinking: false } },
 ];
 
 const rows: Record<string, string | number>[] = [];

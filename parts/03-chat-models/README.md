@@ -20,18 +20,18 @@ Part นี้สอนปรับ **configuration**, อ่าน **metadata/t
 - **Language Model (แบบเก่า):** รับ string คืน string
 - **Chat Model:** รับ **ลิสต์ของ message** (system/human/ai) คืน `AIMessage` — ทุก provider หลักเป็นแบบนี้
 - **`BaseChatModel`:** class แม่ของ Chat Model ทุกตัวใน LangChain มี interface ร่วมกัน (`invoke`, `stream`, `batch`, `bindTools`, `withStructuredOutput`)
-- **Model Abstraction:** โค้ดเรียก `model.invoke(...)` เหมือนกัน ไม่ว่าข้างหลังเป็น Groq, DeepSeek, OpenAI, Anthropic หรือ Google
+- **Model Abstraction:** โค้ดเรียก `model.invoke(...)` เหมือนกัน ไม่ว่าข้างหลังเป็น TokenMe, Groq, DeepSeek, OpenAI, Anthropic หรือ Google
 
 ### 3.2 Provider vs Model
 
-**Provider** = ผู้ให้บริการ/ช่องทางเรียก (Groq, DeepSeek, OpenAI, Anthropic, Google, OpenRouter, Ollama ฯลฯ)
-**Model** = ตัว model ที่ provider โฮสต์ (`openai/gpt-oss-20b`, `deepseek-flash`) — model เดียวกันอาจมีหลาย provider (เช่น gpt-oss บน Groq หรือ OpenRouter)
+**Provider** = ผู้ให้บริการ/ช่องทางเรียก (TokenMe, Groq, DeepSeek, OpenAI, Anthropic, Google, OpenRouter, Ollama ฯลฯ)
+**Model** = ตัว model ที่ provider โฮสต์ (`deepseek-ai/deepseek-v4.1-flash-1017`, `openai/gpt-oss-20b`) — model เดียวกันอาจมีหลาย provider (เช่น gpt-oss บน Groq หรือ OpenRouter)
 
 | กลุ่ม | ตัวอย่าง |
 |---|---|
 | Provider ตรง | OpenAI, Anthropic, Google, DeepSeek, Groq |
 | Gateway/รวมหลายเจ้า | OpenRouter |
-| OpenAI-compatible | provider ที่ใช้ API format แบบ OpenAI (ตั้ง `baseUrl`) |
+| OpenAI-compatible | provider ที่ใช้ API format แบบ OpenAI (ตั้ง `baseUrl`) — เช่น TokenMe ที่ repo นี้ใช้เป็นค่าเริ่มต้น |
 | Local | Ollama, LM Studio (รันบนเครื่อง) |
 
 ### 3.3 Configuration
@@ -44,7 +44,7 @@ Part นี้สอนปรับ **configuration**, อ่าน **metadata/t
 | `timeout` | ms ที่รอ provider | กัน request ค้าง |
 | `maxRetries` | ลองใหม่เมื่อ error ชั่วคราว | ค่าสูง = หน่วงนานเมื่อมีปัญหา |
 | `baseUrl` | ที่อยู่ API | ใช้กับ gateway/OpenAI-compatible/local |
-| option เฉพาะ provider | เช่น `reasoningEffort` ของ Groq | ไม่ portable ข้าม provider |
+| option เฉพาะ provider | เช่น `reasoningEffort` ของ Groq, `chat_template_kwargs.enable_thinking` ของ TokenMe | ไม่ portable ข้าม provider |
 
 ### 3.4 Response
 
@@ -61,37 +61,38 @@ Part นี้สอนปรับ **configuration**, อ่าน **metadata/t
 
 ## 4. Problem Demonstration
 
-รัน `pnpm play 3-3` — กรณี (ก) ใช้ `reasoningEffort: "high"` กับ gpt-oss ที่ `maxTokens` ต่ำ จะได้ **คำตอบว่าง** ทั้งที่ไม่มี error (ทำซ้ำได้ 2/2 ครั้งที่ลอง):
+รัน `pnpm play 3-3` — กรณี (ก) เปิดโหมดคิดของ TokenMe (ค่าเริ่มต้น) ที่ `maxTokens` ต่ำ จะได้ **คำตอบว่าง** ทั้งที่ไม่มี error:
 
 ```
-ก) reasoningEffort=high   maxTokens=60
+ก) เปิดโหมดคิด             maxTokens=60
   finish_reason: length
-  output_tokens: 60
+  output_tokens: 60 | reasoning: 59
   ความยาวคำตอบ: 0 ตัวอักษร (ว่าง! token หมดไปกับการคิด)
 ```
 
-สาเหตุ: gpt-oss เป็น **reasoning model** ใช้ token คิดก่อนตอบ และนับรวมใน `maxTokens` — เราเห็นปัญหานี้จริงตอนทดสอบหลักสูตรนี้
-(แม้ตั้ง 1000 ก็ยังเจอว่างเป็นบางครั้ง)
+สาเหตุ: โมเดลเป็น **reasoning model** ใช้ token คิดก่อนตอบ และนับรวมใน `maxTokens` — เราเห็นปัญหานี้จริงตอนทดสอบหลักสูตรนี้
+(แม้ตั้ง 300 ก็ยังว่าง เพราะการคิดใช้ไป 299 token)
 
 ## 5. Solution
 
-- ตั้ง `reasoningEffort: "low"` (option เฉพาะ Groq + gpt-oss) และเผื่อ `maxTokens` ให้พอ
+- ปิดโหมดคิดเมื่องานไม่ต้องใช้ (`thinking: false` ใน `createChatModel` — ส่ง option เฉพาะ provider ให้ถูกตัว) และเผื่อ `maxTokens` ให้พอ
 - เช็ก `finish_reason` เสมอ ถ้าเป็น `length` ถือว่าคำตอบไม่สมบูรณ์
-- รวม config เป็นฟังก์ชันเดียว — ใน repo นี้คือ `createChatModel()` (`src/models/index.ts`) ใช้ `reasoningEffort: "low"` เป็นค่าเริ่มต้นกับ gpt-oss
+- รวม config เป็นฟังก์ชันเดียว — ใน repo นี้คือ `createChatModel()` (`src/models/index.ts`): TokenMe ส่ง `chat_template_kwargs.enable_thinking: false`, DeepSeek ส่ง `thinking: {type:"disabled"}`, Groq gpt-oss ใช้ `reasoningEffort: "low"` เป็นค่าเริ่มต้น
 
 ```ts
 // src/models/index.ts (ย่อ)
-const model = await createChatModel({ provider: "groq", temperature: 0, maxTokens: 3000 });
+const model = await createChatModel({ temperature: 0, maxTokens: 3000, thinking: false }); // ค่าเริ่มต้น provider = tokenme
 ```
 
 **ข้อจำกัดของ abstraction:** interface เหมือนกัน แต่ option เฉพาะ provider (เช่น `reasoningEffort`), ชื่อ model, ขีดความสามารถ และรูปแบบ usage metadata ยังต่างกัน
-ต้องทดสอบเมื่อสลับ provider (เช่น DeepSeek รายงาน `output_token_details.reasoning` ต่างจาก Groq)
+ต้องทดสอบเมื่อสลับ provider (เช่น Groq ไม่รายงาน `output_token_details.reasoning` แต่ TokenMe/DeepSeek รายงาน)
 
 ## 6. Visual Explanation
 
 ```mermaid
 flowchart LR
   APP["โค้ดของเรา<br/>model.invoke(...)"] --> ABS["BaseChatModel<br/>interface เดียวกัน"]
+  ABS --> T["ChatOpenAI → TokenMe<br/>deepseek-v4.1-flash"]
   ABS --> G["ChatGroq<br/>gpt-oss-20b"]
   ABS --> D["ChatDeepSeek<br/>deepseek-flash"]
   ABS --> O["ChatOpenAI / ChatAnthropic / …"]
@@ -104,76 +105,132 @@ flowchart LR
 
 ## 7. Coding Examples
 
-รัน `pnpm play 3-N` (ต้องมี `GROQ_API_KEY`; 03-07 และ workshop ใช้ `DEEPSEEK_API_KEY` ด้วย — ถ้าไม่มีจะข้าม)
-ผลลัพธ์ที่ให้ไว้คือ *ตัวอย่างผลลัพธ์ — LLM ไม่ได้ตอบเหมือนเดิมทุกครั้ง* (ตรวจกับ Groq `openai/gpt-oss-20b`, DeepSeek `deepseek-flash`)
+รัน `pnpm play 3-N` (ต้องมี `TOKENME_API_KEY`; 03-07 และ workshop เทียบ `GROQ_API_KEY` / `DEEPSEEK_API_KEY` ด้วย — ตัวไหนไม่มี key จะถูกข้าม)
+ผลลัพธ์ที่ให้ไว้คือ *ตัวอย่างผลลัพธ์ — LLM ไม่ได้ตอบเหมือนเดิมทุกครั้ง* (ตรวจกับ TokenMe `deepseek-ai/deepseek-v4.1-flash-1017`, Groq `openai/gpt-oss-20b`, DeepSeek `deepseek-flash`)
 
-### 03-01 Configure Chat Model — ตั้ง temperature, maxTokens, timeout, maxRetries, reasoningEffort
+### 03-01 Configure Chat Model — ตั้ง temperature, maxTokens, timeout, maxRetries, option เฉพาะ provider
 ```
-**ชื่อ:** โอริโอ
+ชื่อ: **ส้มจี๊ด**
 
-**เหตุผลสั้น ๆ:**
-โอริโอเป็นชื่อที่เล่นกับสีขาว-ดำของขนแมว …
+เหตุผล: "จี๊ด" เป็นคำที่ฟังดูน่ารัก สดใส และมีเสียงสูงเหมือนแมวสีส้มที่ขี้เล่น ช่างพูด ช่างอ้อน อีกทั้งยังจำง่ายและเรียกแล้วรู้สึกเอ็นดู
 ```
 
 ### 03-02 Compare Temperature — temperature 0 vs 1.5 อย่างละ 3 รอบ
 ```
 --- temperature = 0 ---
-รอบ 1: บัวกาแฟ (Bua Coffee)
-รอบ 2: บัวกาแฟ (Bua Coffee)
-รอบ 3: บัวกาแฟ (Bua Coffee)
+รอบ 1: ฟ้าครึ้มคาเฟ่
+รอบ 2: ฟ้าครึ้มคาเฟ่
+รอบ 3: กลิ่นฝนคาเฟ่
 
 --- temperature = 1.5 ---
-รอบ 1: กาแฟสู่ฝัน (Kaffè Sūu Than)
-รอบ 2: Caféโคตรใส่ใจ
-รอบ 3: สายน้ำพุ่งกาแฟเมล่าถังกาแฟ
+รอบ 1: คาเฟ่ตะวันฉาย
+รอบ 2: โมเมนต์คอฟฟี่
+รอบ 3: ınละมุนคาเฟ่
 ```
-สังเกต: temperature สูงมากทำให้คำตอบหลากหลายแต่เริ่มเพี้ยน
+สังเกต: temperature สูงมากทำให้คำตอบหลากหลายแต่เริ่มเพี้ยน (บางรอบมีตัวอักษรแปลกปน) และ temperature 0 ก็ไม่การันตีว่าซ้ำเป๊ะทุกรอบ
 
-### 03-03 Limit Output Tokens
+### 03-03 Limit Output Tokens — เปิด/ปิดโหมดคิด
 ```
-maxTokens=30   finish_reason: length  output_tokens: 30   ความยาวคำตอบ: 37 ตัวอักษร
-maxTokens=300  finish_reason: length  output_tokens: 300  ความยาวคำตอบ: 670 ตัวอักษร
-maxTokens=3000 finish_reason: stop    output_tokens: 991  ความยาวคำตอบ: 2221 ตัวอักษร
+ก) เปิดโหมดคิด             maxTokens=60
+  finish_reason: length
+  output_tokens: 60 | reasoning: 59
+  ความยาวคำตอบ: 0 ตัวอักษร (ว่าง! token หมดไปกับการคิด)
+
+ก) เปิดโหมดคิด             maxTokens=300
+  finish_reason: length
+  output_tokens: 300 | reasoning: 300
+  ความยาวคำตอบ: 0 ตัวอักษร (ว่าง! token หมดไปกับการคิด)
+
+ข) ปิดโหมดคิด              maxTokens=30
+  finish_reason: length
+  output_tokens: 30 | reasoning: 0
+  ความยาวคำตอบ: 75 ตัวอักษร 
+
+ข) ปิดโหมดคิด              maxTokens=300
+  finish_reason: length
+  output_tokens: 300 | reasoning: 0
+  ความยาวคำตอบ: 666 ตัวอักษร 
 ```
+สังเกต: ปิดโหมดคิดแล้ว `reasoning: 0` และ token ทั้งหมดกลายเป็นคำตอบ (`finish_reason: length` ใน 2 กรณีหลังหมายถึงชนเพดานที่เราตั้งไว้เองจงใจ — คำตอบถูกตัดแต่ไม่ว่าง)
 
 ### 03-04 Inspect Response Metadata
 ```
-content: 1 + 1 เท่ากับ **2**.
-id: chatcmpl-0eca21cf-…
+content: 2
+id: undefined
 finish_reason: stop
-model: openai/gpt-oss-20b
-keys ของ response_metadata: [ 'tokenUsage', 'finish_reason', 'id', 'model', 'usage', … ]
+model: undefined
+keys ของ response_metadata: [
+  'tokenUsage',
+  'finish_reason',
+  'normalized_finish_reason',
+  'model_provider',
+  'model_name',
+  'usage'
+]
 tool_calls: []
 ```
+สังเกต: `id` และ `model` เป็น `undefined` เพราะ TokenMe ใส่ชื่อ model ไว้ใน `response_metadata.model_name` — อย่าสมมติชื่อ field ของ provider
 
 ### 03-05 Inspect Token Usage
 ```
 prompt สั้น (6 ตัวอักษร)
-  usage_metadata: { input_tokens: 75, output_tokens: 56, total_tokens: 131 }
-  completion_tokens_details: { reasoning_tokens: 21 }
+  usage_metadata: {
+  output_tokens: 39,
+  input_tokens: 34,
+  total_tokens: 73,
+  input_token_details: { audio: undefined, cache_read: 0 },
+  output_token_details: { audio: undefined, reasoning: 22 }
+}
+  completion_tokens_details: { reasoning_tokens: 22 }
+
 prompt ยาว (90 ตัวอักษร)
-  usage_metadata: { input_tokens: 96, output_tokens: 570, total_tokens: 666 }
+  usage_metadata: {
+  output_tokens: 1342,
+  input_tokens: 53,
+  total_tokens: 1395,
+  input_token_details: { audio: undefined, cache_read: 0 },
+  output_token_details: { audio: undefined, reasoning: 909 }
+}
+  completion_tokens_details: { reasoning_tokens: 909 }
 ```
-สังเกต: prompt "สวัสดี" สั้นมาก แต่ `input_tokens` = 75 เพราะ provider/แม่แบบ chat เติม token ระบบเข้าไปด้วย
+สังเกต: prompt สั้นมากแต่ `input_tokens` ยังเกิน 30 เพราะ provider/แม่แบบ chat เติม token ระบบเข้าไปด้วย และ `output_tokens` รวม token ที่ใช้คิด (`reasoning`)
 
-### 03-06 Switch Model — gpt-oss-20b vs gpt-oss-120b
+### 03-06 Switch Model — deepseek-v4.1-flash vs qwen3.8-27b
 ```
-=== openai/gpt-oss-20b ===   เวลา: 811 ms | output 164 tokens
-=== openai/gpt-oss-120b ===  เวลา: 921 ms | output 150 tokens
-```
+=== deepseek-ai/deepseek-v4.1-flash-1017 ===
+เวลา: 4362 ms | token: {"output_tokens":369,"input_tokens":50,"total_tokens":419,"input_token_details":{"cache_read":0},"output_token_details":{"reasoning":295}}
+Recursion คือการที่ปัญหาหนึ่งเรียกตัวเองซ้ำ ๆ แต่ทำโจทย์ให้เล็กลงทุกครั้งจนกว่าจะง่ายพอที่จะตอบได้ทันที. เหมือนกับแกะตุ๊กตาลูกโซ่ทีละชั้นจนเจอตัวเล็กสุด แล้วค่อย ๆ ใส่กลับคืนมา.
 
-### 03-07 Switch Provider — Groq vs DeepSeek
+=== unsloth/qwen3.8-27b-nvfp4 ===
+เวลา: 15516 ms | token: {"output_tokens":517,"input_tokens":28,"total_tokens":545,"input_token_details":{"cache_read":0},"output_token_details":{"reasoning":423}}
+ลองนึกภาพว่าพ่อให้ไปบอกแม่ → แม่ให้ไปบอกป้า → ป้าให้ไปบอกน้า… แต่ละคนทำสิ่งเดียวกันคือ "บอกให้คนถัดไปทำต่อ" แต่สุดท้ายมีคนบอกว่า "พอแล้ว ไม่ต้องบอกต่อ"
+
+Recursion ก็เหมือนอย่างนั้นแหละ คือการทำสิ่งเดิมซ้ำแล้วซ้ำไป แต่แต่ละรอบจะ "เล็กลง" หรือ "ใกล้จุดหมายขึ้น" จนในที่สุดมันหยุดได้ 🪞
 ```
-=== groq ===      เวลา: 624 ms  | token: {"input_tokens":93,"output_tokens":150,…}
-=== deepseek ===  เวลา: 3693 ms | token: {"output_tokens":323,"input_tokens":50,…,"output_token_details":{"reasoning":245}}
+สังเกต: prompt เดียวกัน ต่าง model ใช้เวลาและ token ต่างกันมาก (4.4 วินาที/369 token เทียบ 15.5 วินาที/517 token) — ควรวัดเองก่อนเลือก
+
+### 03-07 Switch Provider — TokenMe vs Groq vs DeepSeek
 ```
-สังเกต: โค้ดเหมือนเดิม แต่ latency, ขนาด token และรูปแบบ usage ต่างกัน
+=== tokenme ===
+เวลา: 3675 ms | token: {"output_tokens":372,"input_tokens":50,"total_tokens":422,"input_token_details":{"cache_read":0},"output_token_details":{"reasoning":289}}
+Recursion คือการที่ฟังก์ชันหนึ่งเรียกตัวเองซ้ำ ๆ เพื่อแก้ปัญหาที่ใหญ่ให้เล็กลง เหมือนตุ๊กตาลูกโซ่ที่ข้างในมีตัวมันเองอีกตัว  
+แต่ต้องมีจุดหยุดที่ชัดเจน ไม่งั้นจะเรียกตัวเองไปเรื่อย ๆ ไม่จบเหมือนกระจกสองบานส่องกัน
+
+=== groq ===
+เวลา: 623 ms | token: {"input_tokens":93,"output_tokens":106,"total_tokens":199}
+Recursion คือการให้โปรแกรมทำงานตัวเองซ้ำ ๆ แบบเหมือนกับการเอาแกะเล็ก ๆ มาบรรจุในกระเป๋า แล้วบอกว่า “ถ้าแกะเล็ก ๆ ยังมีอีก ให้ทำเหมือนเดิมต่อ” จนกระทั่งแกะเล็ก ๆ หายไป แล้วโปรแกรมก็จะกลับมาเสร็จสิ้นขั้นตอนทั้งหมด.
+
+=== deepseek ===
+เวลา: 3067 ms | token: {"output_tokens":391,"input_tokens":50,"total_tokens":441,"input_token_details":{"cache_read":0},"output_token_details":{"reasoning":290}}
+Recursion คือการแก้ปัญหาโดยใช้วิธีเดิมซ้ำ ๆ กับปัญหาที่เล็กลงกว่าเดิม เช่น ถามว่า “ตุ๊กตาซ้อนตุ๊กตามีกี่ตัว?” ก็เปิดตัวนอกสุดแล้วถามคำถามเดิมกับตุ๊กตาที่เหลือข้างใน. ต้องมีจุดหยุดเสมอ เช่น เจอตัวสุดท้ายแล้วหยุด ไม่อย่างนั้นจะถามซ้ำไปเรื่อย ๆ ไม่จบ.
+```
+สังเกต: โค้ดเหมือนเดิม แต่ latency, ขนาด token และรูปแบบ usage ต่างกัน (Groq เร็วที่สุดและไม่รายงาน reasoning)
 
 ## 8. Common Mistakes
 
 | ข้อผิดพลาด | สาเหตุ | ตรวจ/แก้ |
 |---|---|---|
-| คำตอบว่างเปล่าไม่มี error | reasoning model ใช้ token คิดจนชน `maxTokens` | เช็ก `finish_reason === "length"`; เพิ่ม `maxTokens`; ลด `reasoningEffort` |
+| คำตอบว่างเปล่าไม่มี error | reasoning model ใช้ token คิดจนชน `maxTokens` | เช็ก `finish_reason === "length"`; เพิ่ม `maxTokens`; ปิด/ลดโหมดคิด (`thinking: false` หรือ `reasoningEffort`) |
 | คิดว่า `temperature: 0` = ผลเหมือนเดิมเสมอ | ความ non-deterministic ระดับระบบ | อย่าเขียน test ที่เทียบข้อความเป๊ะ |
 | `usage_metadata` บางฟิลด์เป็น `undefined` | provider รายงานไม่ครบ | เช็ก optional chaining; อย่าสมมติรูปแบบ |
 | สลับ provider แล้วพัง | option เฉพาะ provider / ชื่อ model ผิด | แยก option เฉพาะ provider ไว้ที่ factory (`createChatModel`) |
@@ -209,9 +266,9 @@ prompt ยาว (90 ตัวอักษร)
 
 1. (Concept) Provider กับ Model ต่างกันอย่างไร? ยกตัวอย่าง model เดียวกันที่มีหลาย provider
 2. (Concept) ทำไม `finish_reason: "length"` ควรถูกถือเป็นสัญญาณเตือน?
-3. (Code reading) ใน 03-03 ถ้า `maxTokens=60` (กรณี ก) แล้วความยาวคำตอบเป็น 0 แปลว่าอะไร?
+3. (Code reading) ใน 03-03 ถ้า `maxTokens=60` (กรณี ก) แล้วความยาวคำตอบเป็น 0 แต่ `reasoning` เกือบเท่า `output_tokens` แปลว่าอะไร?
 4. (Practical) งานจัดหมวดหมู่อีเมลวันละ 10,000 ฉบับ ควรเลือก model แบบไหน เพราะอะไร?
-5. (Practical) ถ้าเปลี่ยนจาก Groq เป็น DeepSeek แล้วโค้ดที่ใช้ `reasoningEffort` พัง ควรแก้อย่างไร?
+5. (Practical) ถ้าเปลี่ยนจาก Groq เป็น TokenMe/DeepSeek แล้วโค้ดที่ใช้ `reasoningEffort` พัง ควรแก้อย่างไร?
 
 ## 14. Next Part
 

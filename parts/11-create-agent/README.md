@@ -86,6 +86,8 @@ flowchart LR
 
 รัน `pnpm play 11-N` — ตรวจกับ Groq `openai/gpt-oss-20b` (11-08 ใช้ scripted model) · ผลจาก LLM คือ *ตัวอย่างผลลัพธ์ — LLM ไม่ได้ตอบเหมือนเดิมทุกครั้ง*
 
+> **หมายเหตุ provider:** ค่าเริ่มต้นของ repo ตอนนี้คือ **TokenMe** (`TOKENME_API_KEY`) — ทุกตัวอย่างถูกรันซ้ำบน TokenMe แล้วผ่าน แต่ข้อความ/ตัวเลข token/เวลาที่แสดงด้านล่างบันทึกไว้จากการรันบน Groq จึงจะไม่ตรงกับที่คุณเห็นเป๊ะ (ไม่ใช่ข้อผิดพลาด)
+
 ### 11-01 First createAgent()
 ```
 จำนวนข้อความใน state: 2
@@ -143,7 +145,7 @@ AI: **ภูเก็ตอากาศสวยงาม** ฝนพร่อ�
 |---|---|---|
 | Groq: `400 … attempted to call tool 'multiply<|channel|>commentary'` (`tool_use_failed`) | gpt-oss บน Groq บางครั้งทำชื่อ tool เพี้ยนตอนขอ tool ในรอบที่สอง (เจอจริงในการทดสอบหลักสูตรนี้ ประมาณครึ่งหนึ่งของบางคำถาม) | error ชั่วคราว → ลองใหม่ (`retryAsync` ใน `src/utils/retry.ts`) หรือใช้โมเดลอื่น (DeepSeek `thinking:false`) |
 | Groq: `400 output_parse_failed` ตอนใช้ `responseFormat` | โมเดลพิมพ์ความคิดแทนที่จะเรียก tool ส่งผลลัพธ์ | ลองใหม่เหมือนข้างบน |
-| Groq: `429 … tokens per minute (TPM): Limit 8000` | agent ส่ง history + tool schema ซ้ำทุกรอบ ใช้ token มาก | เว้นช่วงระหว่างรัน, ลดจำนวน tool, ใช้ DeepSeek ในงานที่ยิงถี่ |
+| Groq: `429 … tokens per minute (TPM): Limit 8000` | agent ส่ง history + tool schema ซ้ำทุกรอบ ใช้ token มาก | เว้นช่วงระหว่างรัน, ลดจำนวน tool, ใช้ TokenMe (ค่าเริ่มต้น) หรือ DeepSeek ในงานที่ยิงถี่ |
 | `GraphRecursionError` | โมเดลวนเกิน `recursionLimit` (ค่าเริ่มต้น 25) | ตั้งเพดานให้เหมาะ + ตรวจ prompt/tool ที่ทำให้วน |
 | โมเดล "แปล" คำค้นเป็นอังกฤษแล้วไม่พบสินค้า | โมเดลเลือก args เอง | system prompt: "ใช้ชื่อตามที่ผู้ใช้พิมพ์"; ให้ tool ตอบว่ามีสินค้าอะไรบ้างเมื่อไม่พบ เพื่อให้ลองใหม่ได้ (เจอจริงใน workshop) |
 | ใช้ agent กับงานที่ลำดับรู้ล่วงหน้า | ชอบ agent เกินจำเป็น | ใช้ workflow/LCEL |
