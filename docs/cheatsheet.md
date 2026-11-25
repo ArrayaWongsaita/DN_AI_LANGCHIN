@@ -167,6 +167,23 @@ const r = await agent.invoke({ messages: [{ role: "user", content: "…" }] }, {
 const r = await answerWithRag({ question, retriever, model });   // r.answer, r.sources
 ```
 
+## Middleware & Human-in-the-Loop (Part 17)
+| API | ใช้ทำอะไร |
+|---|---|
+| `createMiddleware({ name, beforeAgent, beforeModel, wrapModelCall, afterModel, wrapToolCall, afterAgent, stateSchema })` | ชั้นคั่นรอบ agent loop; `before*/after*` คืน state update หรือ `undefined`; `beforeModel: { canJumpTo: ["end"], hook }` + `jumpTo: "end"` = จบทันที |
+| `createAgent({ contextSchema, middleware: [A, B] })` + `invoke(input, { context })` | runtime context (ไม่เก็บใน state); ตัวแรกใน array = ชั้นนอกสุด |
+| `request.runtime.context` (middleware) · `tool(fn, …)` พารามิเตอร์ที่ 2 `.context` (tool) | อ่าน `userId`/`role` ที่ระบบส่งมา |
+| `modelRetryMiddleware` · `modelFallbackMiddleware(model)` · `toolCallLimitMiddleware({ runLimit, exitBehavior })` · `modelCallLimitMiddleware` | reliability สำเร็จรูป |
+| `humanInTheLoopMiddleware({ interruptOn: { deleteTask: { allowedDecisions } } })` | หยุดรออนุมัติ (ต้องมี checkpointer + thread_id) |
+| `r.__interrupt__[0].value.actionRequests` · `agent.invoke(new Command({ resume: { decisions: [{ type: "approve" }] } }), config)` | อ่านคำขอ / resume (`approve` · `edit` + `editedAction` · `reject` + `message`) |
+| `src/middleware/*` (`createApprovalMiddleware`, `createRoleBasedToolMiddleware`, `createAuditMiddleware` …) | ชุดที่ใช้ซ้ำใน Part 17–20 |
+```ts
+const agent = createAgent({ model, tools, contextSchema, checkpointer,
+  middleware: [createToolErrorMiddleware(), createAuditMiddleware(audit), createRoleBasedToolMiddleware(),
+               ...createApprovalMiddleware({ requireFor: ["deleteTask"], recheck })] });
+```
+ข้อควรจำ: middleware หลายตัวทำให้นับ step ของกราฟเพิ่ม → `recursionLimit` ต้องสูงขึ้น (เพดานจริงคือ call limit) · middleware ≠ authorization
+
 ## Docker / PostgreSQL / Gemini setup (Phase 2)
 ```bash
 docker compose up -d --wait        # pgvector/pgvector:0.8.0-pg17 พอร์ต 5435 (pnpm db:up)

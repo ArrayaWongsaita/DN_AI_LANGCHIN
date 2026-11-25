@@ -45,7 +45,8 @@ pnpm play 04-01    # เหมือนกัน
 | 2 | 08 | Streaming, Batch & Concurrency | ✅ |
 | 3 | 09–12 | Tools, Agent Loop, createAgent, Memory | Phase 2 ✅ (Part 09–12) |
 | 4 | 13–16 | Documents, Embeddings, Vector Stores, RAG | Phase 2 ✅ (Part 13–16) |
-| 5 | 17–19 | Middleware & HITL, Testing, Backend | Phase 3 |
+| 5 | 17 | Agent Middleware & Human-in-the-Loop | ✅ |
+| 5 | 18–19 | Testing & Evaluation, Backend | Phase 3 |
 | 6 | 20 | Capstone: AI Personal Task Manager | Phase 3 |
 
 > หมายเหตุ: ทดสอบบน macOS/Linux เท่านั้น — `pnpm play` ยังไม่รองรับ Windows (ใช้ WSL)
