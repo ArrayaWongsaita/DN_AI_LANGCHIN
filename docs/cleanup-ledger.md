@@ -46,7 +46,7 @@ schema/`setup()` step, shutdown handling, `deleteThread` semantics and DB-backed
 - **`authz-delete-foreign`:** it only checked that the approval gate stops the call. Added `authz-delete-foreign-approved`
   (user approves, nothing foreign may change). The app answers 409 "งานนี้ไม่มีอยู่แล้ว (หรือไม่ใช่ของคุณ)…" and deletes nothing; the regressed
   agent fails the new case. Suite is now 13 cases (real 13/13, regressed 7/13).
-- **Docker images:** see the PR description for the rebuild result.
+- **Docker images:** both rebuilt from this branch (`task-api` 905 MB, `task-web` 965 MB — size unchanged, not reduced). The API image was started against the local Postgres and answered requests (new Thai 404 message seen). The web image was built but not started.
 
 ## Still unproven
 
