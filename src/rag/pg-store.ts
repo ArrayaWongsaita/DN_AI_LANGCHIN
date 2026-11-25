@@ -37,10 +37,13 @@ export async function createPgVectorStore(opts: PgStoreOptions): Promise<PGVecto
   assertTableName(tableName);
   const pool = opts.pool ?? createPool();
   try {
-    const store = await PGVectorStore.initialize(embeddings, { pool, tableName, dimensions });
-    // ไลบรารีถือ connection ไว้ 1 ตัวตั้งแต่ initialize — คืนเข้า pool เพื่อไม่ให้ pool.end() ค้าง
-    store.client?.release();
-    store.client = undefined;
+    // ไม่ใช้ PGVectorStore.initialize เพราะมันยืม connection ไว้ก่อนสร้างตาราง — ถ้าสร้างตารางล้ม connection ไม่ถูกคืน และ pool.end() ค้างตลอดไป
+    const store = new PGVectorStore(embeddings, { pool, tableName });
+    try {
+      await store.ensureTableInDatabase(dimensions);
+    } catch (err) {
+      throw new Error(`สร้างตาราง "${tableName}" ไม่ได้: ${(err as Error).message} — ตรวจว่า Postgres มี extension pgvector (ใช้ image pgvector/pgvector) และชื่อตารางไม่ชนคำสงวนของ SQL`);
+    }
 
     const { rows } = await pool.query<{ dims: number }>(
       `select a.atttypmod as dims from pg_attribute a join pg_class c on c.oid = a.attrelid
@@ -91,10 +94,16 @@ export async function upsertDocuments(store: PGVectorStore, docs: Document[]): P
   const existing = new Map(rows.map((r) => [r.id, r.hash]));
 
   const changed = ids.filter((id, i) => existing.has(id) && existing.get(id) !== withHash[i].metadata.contentHash);
-  if (changed.length) await store.delete({ ids: changed });
-
   const toAdd = ids.map((id, i) => ({ id, doc: withHash[i] })).filter(({ id }) => !existing.has(id) || changed.includes(id));
-  if (toAdd.length) await store.addDocuments(toAdd.map((x) => x.doc), { ids: toAdd.map((x) => x.id) });
+  if (toAdd.length) {
+    // embed ก่อนแตะ DB: ถ้า provider ตอบว่าง/ไม่ครบ (เช่นโควตาเต็ม) จะไม่ลบแถวเก่าทิ้ง และ retryAsync จับข้อความนี้ได้
+    const vectors = await store.embeddings.embedDocuments(toAdd.map((x) => x.doc.pageContent));
+    if (vectors.length !== toAdd.length || vectors.some((v) => v.length === 0)) {
+      throw new Error("embedding ของเอกสารว่างเปล่าหรือไม่ครบ (provider ตอบผิดปกติ — มักเกิดจากโควตา free tier เต็ม รอ ~1 นาทีแล้วลองใหม่)");
+    }
+    if (changed.length) await store.delete({ ids: changed });
+    await store.addVectors(vectors, toAdd.map((x) => x.doc), { ids: toAdd.map((x) => x.id) });
+  }
   return ids;
 }
 

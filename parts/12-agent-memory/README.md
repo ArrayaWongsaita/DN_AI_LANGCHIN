@@ -90,7 +90,7 @@ alice: { language: 'ไทย', tone: 'สุภาพ ลงท้ายค่�
 bob:   { language: 'English' }
 carol: {} (ไม่เคยบันทึก)
 หลังลบข้อมูลของ alice → alice: {} | bob ยังอยู่: { language: 'English' }
-userId แปลกๆ ถูกปฏิเสธ: userId ไม่ถูกต้อง (ใช้ได้เฉพาะ a-z 0-9 _ -)
+userId แปลกๆ ถูกปฏิเสธ: userId ไม่ถูกต้อง (ใช้ได้เฉพาะ a-z 0-9 -)
 ```
 **12-08 Long-term Memory (thread ใหม่ยังรู้จักผู้ใช้)**
 ```

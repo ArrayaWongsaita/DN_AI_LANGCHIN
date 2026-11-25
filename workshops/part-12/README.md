@@ -9,7 +9,7 @@
 3. `--pref key=value` บันทึก preference (ซ้ำได้), `--show-prefs`, `--forget` ลบ preference ของผู้ใช้
 4. preference ของผู้ใช้คนนั้นเท่านั้นถูกใส่ใน system prompt
 5. ใช้ `PostgresSaver` + `PostgresStore`; Postgres ล่มต้องมีข้อความบอกวิธีแก้
-6. ตรวจ `userId` (a-z 0-9 _ -) — `../x` ต้องถูกปฏิเสธ
+6. ตรวจ `userId` (a-z 0-9 -) — `../x` ต้องถูกปฏิเสธ
 7. แยก logic ออกเป็นฟังก์ชัน `chat()` เพื่อทดสอบด้วย scripted model
 
 ## วิธีรัน
@@ -34,7 +34,7 @@ bob/c1   : ขออภัย ฉันไม่ทราบรหัสโค�
 bob --thread user:alice:conv:c1 : ❌ forbidden: thread นี้ไม่ใช่ของผู้ใช้
 alice --show-prefs --forget : preferences: { 'ภาษา': 'ตอบสั้นๆ ลงท้ายค่ะ' } / ลบ preference ของผู้ใช้นี้แล้ว
 alice --show-prefs          : preferences: {}
---user ../x                 : ❌ userId ไม่ถูกต้อง (ใช้ได้เฉพาะ a-z 0-9 _ -)
+--user ../x                 : ❌ userId ไม่ถูกต้อง (ใช้ได้เฉพาะ a-z 0-9 -)
 ```
 
 ## Acceptance Criteria

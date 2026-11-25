@@ -1,8 +1,8 @@
 import type { BaseStore } from "@langchain/langgraph-checkpoint";
 
-/** userId ต้องเป็นตัวอักษร/ตัวเลข/_/- เท่านั้น เพื่อไม่ให้ใช้ namespace ของคนอื่นได้ */
+/** userId ต้องเป็นตัวอักษร/ตัวเลข/- เท่านั้น (ห้าม _ เพราะ PostgresStore ถือเป็น wildcard ของ SQL LIKE) เพื่อไม่ให้ใช้ namespace ของคนอื่นได้ */
 function assertUserId(userId: string): void {
-  if (!/^[\w-]+$/.test(userId)) throw new Error("userId ไม่ถูกต้อง (ใช้ได้เฉพาะ a-z 0-9 _ -)");
+  if (!/^[A-Za-z0-9-]+$/.test(userId)) throw new Error("userId ไม่ถูกต้อง (ใช้ได้เฉพาะ a-z 0-9 -)");
 }
 
 const ns = (userId: string): string[] => ["users", userId, "preferences"];

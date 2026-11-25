@@ -134,7 +134,7 @@ index ที่มี: [ 'lessons_setup_demo_pkey' ] (มีแค่ primary ke
 
 - **Security:** ชื่อตาราง/คีย์ filter มาจากโค้ดเท่านั้น; DATABASE_URL อยู่ใน `.env` (git-ignored); แยก user ของ DB ตามสิทธิ์; metadata เป็นข้อมูลที่ไม่ควรเชื่อถือถ้ามาจากไฟล์ภายนอก
 - **Privacy/Retention:** มีทางลบตาม `source`; ข้อมูลส่วนบุคคลที่ embed แล้วยังเป็นข้อมูลส่วนบุคคล — ลบทั้ง chunk และ vector
-- **Reliability:** index แบบ idempotent, retry เมื่อโควตา embedding เต็ม, ข้อความ error ที่บอกวิธีแก้ (`docker compose up -d`)
+- **Reliability:** index แบบ idempotent, retry เมื่อโควตา embedding เต็ม, ข้อความ error ที่บอกวิธีแก้ (`docker compose up -d`) — `upsertDocuments` ไม่ลบ chunk ที่หายไปจากไฟล์ที่สั้นลง (ใช้ `deleteBySource` ก่อน หรือ `indexCurriculum` ที่ลบให้)
 - **Cost:** ข้ามเอกสารที่ไม่เปลี่ยน; เก็บ `contentHash` ใน metadata
 - **Testing:** `tests/part15-stores.test.ts` — ส่วน in-memory/fake รันเสมอ; ส่วน pgvector **รันเฉพาะเมื่อต่อ DB ได้** (`describe.skipIf`) — ถ้า Docker ไม่ได้เปิด เทสต์ pgvector 7 ข้อจะถูกข้าม (สรุปผลจะแสดง `skipped`)
 

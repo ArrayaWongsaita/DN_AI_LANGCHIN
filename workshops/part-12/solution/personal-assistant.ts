@@ -36,7 +36,20 @@ export async function chat(o: ChatOptions): Promise<string> {
   const systemPrompt = lines.length ? `${BASE_PROMPT}\nความต้องการของผู้ใช้:\n${lines.join("\n")}` : BASE_PROMPT;
 
   const agent = createAgent({ model: o.model, tools: [], systemPrompt, checkpointer: o.checkpointer });
-  const r = await retryAsync(() => agent.invoke({ messages: [{ role: "user", content: o.message }] }, { configurable: { thread_id: threadId } }));
+  const config = { configurable: { thread_id: threadId } };
+  // retry ต้องไม่ส่งข้อความผู้ใช้ซ้ำ: ถ้ารอบก่อนล้มหลังบันทึกข้อความลง checkpoint แล้ว ให้ทำต่อจาก checkpoint เดิม (input = null)
+  const userMessage = { role: "user", content: o.message };
+  const alreadySaved = async (): Promise<boolean> => {
+    const msgs = ((await o.checkpointer.getTuple(config))?.checkpoint.channel_values.messages ?? []) as { getType(): string; content: unknown }[];
+    const last = msgs.at(-1);
+    return last?.getType() === "human" && last.content === o.message;
+  };
+  let first = true;
+  const r = await retryAsync(async () => {
+    const resume = !first && (await alreadySaved());
+    first = false;
+    return agent.invoke(resume ? null : { messages: [userMessage] }, config);
+  });
   return messageText(r.messages.at(-1)!).trim();
 }
 

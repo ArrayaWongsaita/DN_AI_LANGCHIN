@@ -26,7 +26,9 @@ export async function indexCurriculum(opts: IndexCurriculumOptions): Promise<{ c
   const { documents, warnings } = await loadCurriculum(opts.dir);
   const types = new Set(opts.types ?? ["txt", "md", "csv", "pdf"]);
   const chunks = (await chunkDocuments(documents.filter((d) => types.has(d.metadata.type)), { chunkSize: 500, chunkOverlap: 50 })).filter((c) => c.pageContent.trim().length >= MIN_CHUNK_LENGTH);
-  await upsertDocuments(store, chunks);
+  const ids = await upsertDocuments(store, chunks);
+  // ตารางนี้เป็นของหลักสูตรเท่านั้น — chunk ที่ไม่มีในชุดปัจจุบัน (ไฟล์สั้นลง/ถูกลบ) ต้องถูกลบ ไม่งั้น RAG จะอ้างข้อความที่ไม่มีแล้ว
+  await opts.pool.query(`delete from ${store.tableName} where id <> all($1::uuid[])`, [ids]);
   return { chunks: chunks.length, embedded: counter.documentsEmbedded, warnings };
 }
 
