@@ -20,7 +20,7 @@ Module 4 เริ่มที่นี่: ให้ AI ตอบจาก "ค
 | .txt / .md | `TextLoader` (`@langchain/classic/document_loaders/fs/text`) | ทั้งไฟล์ |
 | .json | `JSONLoader` (`…/fs/json`) | ทุก string ใน JSON (หรือเฉพาะ JSON pointer ที่ระบุ) |
 | .csv | `CSVLoader` (`@langchain/community/document_loaders/fs/csv`, ต้องมี `d3-dsv`) | 1 แถว |
-| .pdf | `PDFLoader` (`@langchain/community/document_loaders/fs/pdf`) | 1 หน้า |
+| .pdf | `PDFLoader` (`@langchain/community/document_loaders/fs/pdf`) — ต้องติดตั้ง `pdf-parse` ด้วย (เป็น peer dependency ที่ loader โหลดให้เอง ไม่ต้อง import ในโค้ดเรา) | 1 หน้า |
 
 **ทำไมต้องแบ่ง:** (1) เอกสารยาวเกิน context window/เปลือง token (2) embedding ของข้อความยาวเฉลี่ยหลายเรื่องจนค้นไม่แม่น (3) ต้องการส่งโมเดลเฉพาะส่วนที่เกี่ยวข้อง
 
