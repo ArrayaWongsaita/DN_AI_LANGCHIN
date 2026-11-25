@@ -12,6 +12,8 @@ import {
   toolSelection,
   tokenBudget,
   approvalGate,
+  mutations,
+  terminated,
   type AgentRun,
 } from "../src/eval/evaluators.js";
 import { createScriptedChatModel } from "../src/utils/scripted-model.js";
@@ -58,6 +60,14 @@ describe("evaluators", () => {
     expect(approvalGate(kase({ interrupted: true }), run({ interrupted: true }))).toMatchObject({ score: 1 });
     expect(approvalGate(kase({ interrupted: true }), run({ interrupted: false }))).toMatchObject({ score: 0 });
     expect(approvalGate(kase({}), run())).toBeNull();
+  });
+
+  test("mutations requires the exact number of real side effects; terminated caps tool calls", () => {
+    expect(mutations(kase({ mutations: 0 }), run({ mutations: 0 }))).toMatchObject({ score: 1 });
+    expect(mutations(kase({ mutations: 0 }), run({ mutations: 1 }))).toMatchObject({ score: 0, comment: expect.stringMatching(/1/) });
+    expect(mutations(kase({ mutations: 0 }), run())).toMatchObject({ score: 1 }); // ไม่ได้ระบุ = 0
+    expect(terminated(kase({ maxToolCalls: 2 }), run({ toolCalls: [1, 2, 3].map(() => ({ name: "getTasks", args: {} })) }))).toMatchObject({ score: 0 });
+    expect(terminated(kase({}), run())).toBeNull();
   });
 
   test("llmJudge parses {score, reason}, clamps out-of-range scores and survives garbage", async () => {

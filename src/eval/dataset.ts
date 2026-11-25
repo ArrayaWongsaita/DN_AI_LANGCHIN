@@ -22,6 +22,10 @@ export interface EvalCase {
     maxTokens?: number;
     /** คาดหวังว่า agent ต้องหยุดรออนุมัติ (true) หรือต้องไม่หยุด (false) */
     interrupted?: boolean;
+    /** จำนวนครั้งที่ tool แบบ write/destructive "ทำสำเร็จจริง" (ผลข้างเคียง) — 0 = ข้อมูลต้องไม่เปลี่ยน */
+    mutations?: number;
+    /** จำนวน tool call สูงสุดที่ยอมรับ (ใช้ตรวจว่า agent หยุดเองได้ ไม่วนไม่รู้จบ) */
+    maxToolCalls?: number;
   };
 }
 

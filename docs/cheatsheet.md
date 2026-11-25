@@ -184,6 +184,23 @@ const agent = createAgent({ model, tools, contextSchema, checkpointer,
 ```
 ข้อควรจำ: middleware หลายตัวทำให้นับ step ของกราฟเพิ่ม → `recursionLimit` ต้องสูงขึ้น (เพดานจริงคือ call limit) · middleware ≠ authorization
 
+## Testing & Evaluation (Part 18)
+| API | ใช้ทำอะไร |
+|---|---|
+| `tool.invoke(input, { context: { userId } })` | unit test tool ตรงๆ (ไม่ต้องมี model) |
+| `createScriptedChatModel([...AIMessage])` → `.seenMessages`, `.calls` | model ปลอม (ส่งคืน `AIMessageChunk` เพื่อใช้กับ `withStructuredOutput` ได้) |
+| `createFakeWeatherApi({ failTimes })` · `createFlakyModel(model, n)` | API/model ปลอมที่ล้มตามสั่ง |
+| `assertTrajectory(messages, [{ name, args? }], { ordered })` · `extractToolCalls` | ตรวจลำดับ tool call |
+| `runEval(cases, runAgent, evaluators)` → `{ pass, total, byCase }` | รันชุดทดสอบ (agent พังกรณีหนึ่งไม่ล้มทั้งชุด) |
+| evaluators: `toolSelection` `toolArgs` `ruleBased` `schemaValid` `mutations` `approvalGate` `terminated` `tokenBudget` `llmJudge(model)` | ตรวจต่างมิติ; คืน `null` = ไม่เกี่ยว |
+| `requireLangSmith()` · `withTracingGuard(fn)` | เปิด tracing เฉพาะเมื่อมี key / ไม่ให้ error ของ LangSmith ทำ agent พัง |
+| `new Client()` (`langsmith`) → `hasDataset`, `createDataset`, `createExamples`, `listExamples`, `readRun` | dataset / อ่าน trace |
+| `evaluate(target, { data, evaluators, experimentPrefix, maxConcurrency })` (`langsmith/evaluation`) | รัน experiment; evaluator รับ `{ inputs, outputs, referenceOutputs }` |
+| config ตอน invoke: `{ runName, tags, metadata, runId }` | ตั้งชื่อ/กรอง/อ้างอิง trace |
+| `await awaitAllCallbacks()` (`@langchain/core/callbacks/promises`) | รอ trace ส่งก่อนโปรแกรมจบ |
+env: `LANGSMITH_API_KEY` · `LANGSMITH_TRACING=true|false` · `LANGSMITH_PROJECT` · `EVAL_PROVIDER=deepseek` (ตัวอย่าง 18-12/13)
+ข้อควรจำ: free plan จำกัด trace → ปิดเป็นค่าเริ่มต้น; ผลวัดที่ไม่ครบ (429) ห้ามอ่านเป็นผ่าน; Groq free มีโควตา **รายวัน** 200,000 token
+
 ## Docker / PostgreSQL / Gemini setup (Phase 2)
 ```bash
 docker compose up -d --wait        # pgvector/pgvector:0.8.0-pg17 พอร์ต 5435 (pnpm db:up)
