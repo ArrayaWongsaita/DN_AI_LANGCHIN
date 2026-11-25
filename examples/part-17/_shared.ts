@@ -21,7 +21,8 @@ export async function ask(
   agent: { invoke: (input: { messages: { role: "user"; content: string }[] }, config: { context: TaskContext; recursionLimit?: number }) => Promise<{ messages: unknown[] }> },
   text: string,
   context: TaskContext,
+  recursionLimit = 10, // middleware แต่ละตัวที่มี hook นับเป็น 1 step ด้วย — stack หนาๆ ต้องเพิ่ม (ดู 17-10)
 ): Promise<string> {
-  const r = await retryAsync(() => agent.invoke({ messages: [{ role: "user", content: text }] }, { context, recursionLimit: 10 }));
+  const r = await retryAsync(() => agent.invoke({ messages: [{ role: "user", content: text }] }, { context, recursionLimit }));
   return messageText(r.messages.at(-1) as { content: never }).trim();
 }
