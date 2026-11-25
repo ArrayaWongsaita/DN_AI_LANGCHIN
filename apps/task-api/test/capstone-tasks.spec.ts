@@ -146,6 +146,7 @@ describe.skipIf(!hasDb)("milestone 02/04 — tasks API, Bangkok dates, full tool
 
     test("write tools cannot touch another user's task id (data unchanged), errors do not crash the run", async () => {
       const bt = await tasks.create(b.id, { title: "ของ B", priority: "Low" });
+      conv = (await api().post("/conversations", {})).body.id; // บทสนทนาใหม่ (ของเดิมยาวจนเริ่มสรุปประวัติ)
       ctx.useScript(
         call("x1", "updateTask", { id: bt.id, title: "hijack" }),
         call("x2", "completeTask", { id: bt.id }),

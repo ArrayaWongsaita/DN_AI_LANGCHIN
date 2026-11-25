@@ -29,6 +29,7 @@ import { JwtService } from "@nestjs/jwt";
 import { Test } from "@nestjs/testing";
 import request from "supertest";
 import { AgentService } from "../src/ai/agent.service.js";
+import { SummaryService } from "../src/ai/summary.service.js";
 import { CHAT_MODEL } from "../src/ai/model.provider.js";
 import { AppModule } from "../src/app.module.js";
 import { createScriptedChatModel } from "../src/shared/scripted-model.js";
@@ -49,6 +50,7 @@ export async function makeApp(options: { mcp?: boolean } = {}) {
   const useScript = (...script: AIMessage[]) => {
     const model = createScriptedChatModel(script);
     (agent as unknown as { model: unknown }).model = model;
+    (app.get(SummaryService) as unknown as { model: unknown }).model = model;
     return model;
   };
   return { app, mod, agent, prisma: app.get(PrismaServiceRef), jwt: app.get(JwtService), useScript, http: () => app.getHttpServer() };

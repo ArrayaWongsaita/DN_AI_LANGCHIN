@@ -3,15 +3,19 @@ import { isAIMessage, type BaseMessage } from "@langchain/core/messages";
 import { Command, MemorySaver } from "@langchain/langgraph";
 import { Inject, Injectable } from "@nestjs/common";
 import type { StructuredToolInterface } from "@langchain/core/tools";
-import { createAgent } from "langchain";
+import type { BaseStore } from "@langchain/langgraph-checkpoint";
+import { createAgent, modelCallLimitMiddleware, modelFallbackMiddleware, modelRetryMiddleware, summarizationMiddleware, toolCallLimitMiddleware, type AgentMiddleware } from "langchain";
 import { MCP_TOOLS, type McpToolsFactory } from "../mcp/mcp-tools.js";
-import { retryAsync } from "../shared/retry.js";
+import { isTransientModelError } from "../shared/retry.js";
 import { messageText } from "../shared/text.js";
 import { TasksService } from "../tasks/tasks.service.js";
 import { createToolErrorMiddleware } from "./tool-errors.middleware.js";
 import { createApprovalMiddleware, type ApprovalDecision } from "./approval.middleware.js";
-import { CHAT_MODEL } from "./model.provider.js";
-import { UNTRUSTED_RULE, createUntrustedResultMiddleware } from "./untrusted.middleware.js";
+import { CHAT_MODEL, FALLBACK_MODEL } from "./model.provider.js";
+import { createDynamicPromptMiddleware } from "./dynamic-prompt.middleware.js";
+import { createLoggingMiddleware, type LogEvent } from "./logging.middleware.js";
+import { STORE } from "./preferences.js";
+import { createUntrustedResultMiddleware } from "./untrusted.middleware.js";
 import { runtimeContextSchema, type RuntimeContext } from "./runtime-context.js";
 import { createTaskTools } from "./task-tools.js";
 import { assertThreadOwner, threadIdFor } from "./thread-access.js";
@@ -79,10 +83,18 @@ export class AgentService {
     @Inject(CHAT_MODEL) private model: BaseChatModel,
     @Inject(TasksService) private readonly tasks: TasksService,
     @Inject(MCP_TOOLS) private readonly mcp: McpToolsFactory | null,
+    @Inject(STORE) private readonly store: BaseStore,
+    @Inject(FALLBACK_MODEL) private fallbackModel: BaseChatModel | null,
   ) {}
 
-  /** ตัวเลือกของ retryAsync (เทสต์ตั้ง delay ให้สั้นได้) */
-  retryOptions: { attempts?: number; delayMs?: number } = {};
+  /** ตัวเลือกของ modelRetryMiddleware (เทสต์ตั้ง delay ให้สั้นได้) */
+  retryOptions: { maxRetries?: number; delayMs?: number } = {};
+  /** เพดานการทำงานต่อหนึ่งคำขอ (กัน loop/ค่าใช้จ่ายพุ่ง) */
+  limits?: { modelCalls: number; toolCalls: number };
+  /** เมื่อประวัติยาวถึง `trigger` ข้อความ ให้สรุปของเก่าเป็นข้อความเดียวและเก็บ `keep` ข้อความล่าสุด */
+  summarize?: { trigger: number; keep: number };
+  /** ตัวรับ log ของ agent (ค่าเริ่มต้น: เงียบ; ตั้ง AGENT_LOG=true เพื่อพิมพ์) */
+  logSink?: (e: LogEvent) => void;
 
   /** โหลด MCP tools ของผู้ใช้ (ถ้าเปิดไว้) รัน fn แล้วปิดการเชื่อมต่อเสมอ */
   private async withAgent<T>(ctx: RuntimeContext, fn: (agent: ReturnType<AgentService["build"]>) => Promise<T>): Promise<T> {
@@ -94,17 +106,22 @@ export class AgentService {
     }
   }
 
-  private build(extraTools: StructuredToolInterface[] = []) {
-    const today = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Bangkok" });
-    return createAgent({
-      model: this.model,
-      tools: [...createTaskTools(this.tasks), ...extraTools],
-      contextSchema: runtimeContextSchema,
-      checkpointer: this.checkpointer,
-      middleware: [
-        createToolErrorMiddleware(),
-        ...(extraTools.length ? [createUntrustedResultMiddleware((n) => extraTools.some((t) => t.name === n))] : []),
-        ...createApprovalMiddleware({
+  private middleware(extraTools: StructuredToolInterface[]): AgentMiddleware[] {
+    const limits = this.limits ?? { modelCalls: 12, toolCalls: 10 };
+    const sum = this.summarize ?? { trigger: 40, keep: 12 };
+    const sink = this.logSink ?? (process.env.AGENT_LOG === "true" ? (e: LogEvent) => console.log("[agent]", JSON.stringify(e)) : () => undefined);
+    // กลุ่มที่ห่อ model/tool จากนอกสุดเข้าใน: error → log → ข้อมูลภายนอก → prompt → fallback → retry → เพดาน → สรุปประวัติ → อนุมัติ
+    return [
+      createToolErrorMiddleware(),
+      createLoggingMiddleware(sink) as unknown as AgentMiddleware,
+      createUntrustedResultMiddleware((n) => n === "searchKnowledge" || extraTools.some((t) => t.name === n)),
+      createDynamicPromptMiddleware(),
+      ...(this.fallbackModel ? [modelFallbackMiddleware(this.fallbackModel) as unknown as AgentMiddleware] : []), // อยู่นอก retry: ลองโมเดลหลักครบก่อนค่อยสลับ
+      modelRetryMiddleware({ maxRetries: this.retryOptions.maxRetries ?? 2, initialDelayMs: this.retryOptions.delayMs ?? 500, backoffFactor: 2, retryOn: (e: Error) => isTransientModelError(e), onFailure: "error" }) as unknown as AgentMiddleware,
+      modelCallLimitMiddleware({ runLimit: limits.modelCalls, exitBehavior: "end" }) as unknown as AgentMiddleware,
+      toolCallLimitMiddleware({ runLimit: limits.toolCalls, exitBehavior: "end" }) as unknown as AgentMiddleware,
+      summarizationMiddleware({ model: this.model, trigger: { messages: sum.trigger }, keep: { messages: sum.keep } }) as unknown as AgentMiddleware,
+      ...createApprovalMiddleware({
         requireFor: APPROVAL_TOOLS,
         // ตรวจซ้ำตอนรันจริง: งานต้องยังมีอยู่และเป็นของผู้ใช้ใน context (ไม่ใช่ที่ model อ้าง)
         recheck: async ({ args }, context) => {
@@ -112,13 +129,22 @@ export class AgentService {
           return this.tasks.get(context.userId, args.id).then(() => true, () => false);
         },
       }),
-      ],
-      systemPrompt: `คุณคือผู้ช่วยจัดการงานของผู้ใช้ ตอบเป็นภาษาไทยสั้นกระชับ วันนี้คือ ${today} (เขตเวลา Asia/Bangkok) ใช้ tool เพื่อดู/สร้าง/แก้/ลบงานเท่านั้น ห้ามอ้างว่าทำสิ่งที่ไม่ได้เรียก tool เมื่อผู้ใช้สั่งลบให้เรียก deleteTask ทันที (ถ้ายังไม่รู้ id ให้เรียก getTasks ก่อน) ระบบจะขออนุมัติจากผู้ใช้เองจึงไม่ต้องถามยืนยันในแชท และถ้า tool ล้มเหลวให้บอกตามจริง ${UNTRUSTED_RULE}`,
+    ];
+  }
+
+  private build(extraTools: StructuredToolInterface[] = []) {
+    return createAgent({
+      model: this.model,
+      tools: [...createTaskTools(this.tasks), ...extraTools],
+      contextSchema: runtimeContextSchema,
+      checkpointer: this.checkpointer,
+      store: this.store,
+      middleware: this.middleware(extraTools),
     });
   }
 
   private config(ctx: RuntimeContext, conversationId: string, signal?: AbortSignal) {
-    return { configurable: { thread_id: ownedThreadId(ctx.userId, conversationId) }, context: ctx, recursionLimit: 60, signal };
+    return { configurable: { thread_id: ownedThreadId(ctx.userId, conversationId) }, context: ctx, recursionLimit: 150, signal };
   }
 
   private toResult(result: { messages: BaseMessage[]; __interrupt__?: { value?: { actionRequests?: PendingAction[] } }[] }): AgentRunResult {
@@ -136,7 +162,7 @@ export class AgentService {
   async run(input: { ctx: RuntimeContext; conversationId: string; message: string }): Promise<AgentRunResult> {
     const config = this.config(input.ctx, input.conversationId);
     const result = await this.withAgent(input.ctx, (agent) =>
-      retryAsync(() => agent.invoke({ messages: [{ role: "user", content: input.message }] }, config), this.retryOptions),
+      agent.invoke({ messages: [{ role: "user", content: input.message }] }, config),
     );
     return this.toResult(result as never);
   }
@@ -145,7 +171,7 @@ export class AgentService {
   async resume(input: { ctx: RuntimeContext; conversationId: string; decisions: ApprovalDecision[] }): Promise<AgentRunResult> {
     const config = this.config(input.ctx, input.conversationId);
     const result = await this.withAgent(input.ctx, (agent) =>
-      retryAsync(() => agent.invoke(new Command({ resume: { decisions: input.decisions } }), config), this.retryOptions),
+      agent.invoke(new Command({ resume: { decisions: input.decisions } }), config),
     );
     return this.toResult(result as never);
   }
@@ -180,6 +206,7 @@ export class AgentService {
           yield { type: "interrupt", actions: actions.map((a) => ({ name: a.name, args: a.args, description: a.description })) };
           return;
         }
+        if (node !== "model_request" && node !== "tools") continue; // node ของ middleware ก็ส่ง update ซ้ำ — นับเฉพาะ model/tool จริง
         const messages = ((update as { messages?: BaseMessage[] } | null)?.messages ?? []) as BaseMessage[];
         for (const m of messages) {
           if (isAIMessage(m)) {
