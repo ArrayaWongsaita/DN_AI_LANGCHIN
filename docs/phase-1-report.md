@@ -22,7 +22,8 @@
 2. DeepSeek ต้องปิด thinking (`thinking:false`) จึงใช้ structured output/tool calling ได้ (Part 06)
 3. Schema ที่บังคับ field ที่ข้อมูลอาจไม่มี ทำให้ model แต่งค่า (ไซซ์ `['S']`) → อนุญาต array ว่าง + ตรวจกฎธุรกิจ (Part 06)
 4. Generator ใน chain ไม่ทำให้สตรีมต่อเนื่อง (วนทีละตัวอักษรหลังรอข้อความครบ) → ตัดเดโมออก (Part 08)
-5. Groq แบบสตรีมไม่ส่ง `usage_metadata` (Part 08)
+5. `@langchain/groq` ใส่ usage ที่ `response_metadata.usage` (ไม่ใช่ `usage_metadata`) และ `total_tokens` บวกซ้ำหลัง `concat` (Part 08)
+6. `batch(returnExceptions)` บน chain หลายขั้นตอนทำให้ error จริงถูกแทนด้วย TypeError (Part 08)
 
 ## ข้ามไป / ยังไม่ทำ
 - LangSmith (ยังไม่มี `LANGSMITH_API_KEY` — ต้องใช้ใน Part 18+)

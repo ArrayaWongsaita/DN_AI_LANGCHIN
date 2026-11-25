@@ -4,6 +4,7 @@
 import { StringOutputParser } from "@langchain/core/output_parsers";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { Runnable, RunnableLambda, RunnableParallel } from "@langchain/core/runnables";
+import { isMain } from "../../../src/utils/is-main.js";
 import { createChatModel } from "../../../src/models/index.js";
 
 export type Sentiment = "positive" | "neutral" | "negative";
@@ -63,7 +64,7 @@ export function buildContentProcessor(
   return validate.pipe(analyze) as unknown as Runnable<{ article: string }, ContentResult>;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isMain(import.meta.url)) {
   const article = process.argv[2];
   if (!article) {
     console.log('วิธีใช้: content-processor.ts "<บทความ>"');

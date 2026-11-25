@@ -1,11 +1,13 @@
 // Workshop 06 — เฉลย: AI Product Extractor
-// ใช้: pnpm exec tsx --env-file=.env workshops/part-06/solution/product-extractor.ts "เสื้อสีดำราคา 350 บาท มีไซซ์ M และ L"
-import { createChatModel } from "../../../src/models/index.js";
+// ใช้: pnpm exec tsx --env-file=.env workshops/part-06/solution/product-extractor.ts "เสื้อสีดำราคา 350 บาท มีไซซ์ M และ L" [groq|deepseek]
+import { isMain } from "../../../src/utils/is-main.js";
+import { createChatModel, type ProviderName } from "../../../src/models/index.js";
 import { productSchema, validateBusinessRules, type Product } from "./product-schema.js";
 
 /** ดึงข้อมูลสินค้าจากข้อความ: structured output → ตรวจกฎธุรกิจ → retry สูงสุด 2 ครั้งโดยบอกข้อผิดพลาด */
-export async function extractProduct(text: string, maxAttempts = 3): Promise<Product> {
-  const model = (await createChatModel({ maxTokens: 2000, thinking: false })).withStructuredOutput(productSchema);
+export async function extractProduct(text: string, opts: { maxAttempts?: number; provider?: ProviderName } = {}): Promise<Product> {
+  const { maxAttempts = 3, provider } = opts;
+  const model = (await createChatModel({ provider, maxTokens: 2000, thinking: false })).withStructuredOutput(productSchema);
   let feedback = "";
   let lastErrors: string[] = [];
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -23,11 +25,17 @@ export async function extractProduct(text: string, maxAttempts = 3): Promise<Pro
 }
 
 // รันเป็นสคริปต์เมื่อถูกเรียกตรงๆ (ไม่รันเมื่อถูก import)
-if (import.meta.url === `file://${process.argv[1]}`) {
-  const text = process.argv[2];
-  if (!text) {
-    console.log('วิธีใช้: product-extractor.ts "เสื้อสีดำราคา 350 บาท มีไซซ์ M และ L"');
+if (isMain(import.meta.url)) {
+  // วิธีใช้: product-extractor.ts "<ข้อความ>" [groq|deepseek]
+  const [text, provider] = process.argv.slice(2);
+  if (!text || (provider && provider !== "groq" && provider !== "deepseek")) {
+    console.log('วิธีใช้: product-extractor.ts "เสื้อสีดำราคา 350 บาท มีไซซ์ M และ L" [groq|deepseek]');
     process.exit(1);
   }
-  console.log(await extractProduct(text));
+  try {
+    console.log(await extractProduct(text, { provider: provider as ProviderName | undefined }));
+  } catch (err) {
+    console.error(`❌ ${(err as Error).message}`);
+    process.exit(1);
+  }
 }

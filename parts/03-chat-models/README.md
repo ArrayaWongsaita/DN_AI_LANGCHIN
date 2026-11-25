@@ -61,12 +61,12 @@ Part นี้สอนปรับ **configuration**, อ่าน **metadata/t
 
 ## 4. Problem Demonstration
 
-รัน `pnpm play 3-3` ในรูปแบบเดิมที่ไม่ตั้ง reasoning effort ด้วย gpt-oss ที่ `maxTokens` ต่ำ จะได้ **คำตอบว่าง** ทั้งที่ไม่มี error:
+รัน `pnpm play 3-3` — กรณี (ก) ใช้ `reasoningEffort: "high"` กับ gpt-oss ที่ `maxTokens` ต่ำ จะได้ **คำตอบว่าง** ทั้งที่ไม่มี error (ทำซ้ำได้ 2/2 ครั้งที่ลอง):
 
 ```
-maxTokens=150
+ก) reasoningEffort=high   maxTokens=60
   finish_reason: length
-  output_tokens: 150
+  output_tokens: 60
   ความยาวคำตอบ: 0 ตัวอักษร (ว่าง! token หมดไปกับการคิด)
 ```
 
@@ -209,7 +209,7 @@ prompt ยาว (90 ตัวอักษร)
 
 1. (Concept) Provider กับ Model ต่างกันอย่างไร? ยกตัวอย่าง model เดียวกันที่มีหลาย provider
 2. (Concept) ทำไม `finish_reason: "length"` ควรถูกถือเป็นสัญญาณเตือน?
-3. (Code reading) ใน 03-03 ถ้า `maxTokens=150` แล้วความยาวคำตอบเป็น 0 แปลว่าอะไร?
+3. (Code reading) ใน 03-03 ถ้า `maxTokens=60` (กรณี ก) แล้วความยาวคำตอบเป็น 0 แปลว่าอะไร?
 4. (Practical) งานจัดหมวดหมู่อีเมลวันละ 10,000 ฉบับ ควรเลือก model แบบไหน เพราะอะไร?
 5. (Practical) ถ้าเปลี่ยนจาก Groq เป็น DeepSeek แล้วโค้ดที่ใช้ `reasoningEffort` พัง ควรแก้อย่างไร?
 

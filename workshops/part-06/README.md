@@ -13,7 +13,8 @@
 
 ## วิธีรัน
 ```bash
-pnpm exec tsx --env-file=.env workshops/part-06/solution/product-extractor.ts "เสื้อสีดำราคา 350 บาท มีไซซ์ M และ L"
+pnpm exec tsx --env-file=.env workshops/part-06/solution/product-extractor.ts "เสื้อสีดำราคา 350 บาท มีไซซ์ M และ L"            # Groq (ค่าเริ่มต้น)
+pnpm exec tsx --env-file=.env workshops/part-06/solution/product-extractor.ts "เสื้อสีดำราคา 350 บาท มีไซซ์ M และ L" deepseek   # DeepSeek
 pnpm test tests/part06-schemas.test.ts
 ```
 

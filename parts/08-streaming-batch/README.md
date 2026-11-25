@@ -84,7 +84,7 @@ flowchart LR
 
 ## 7. Coding Examples
 
-รัน `pnpm play 8-N` — ผลลัพธ์คือ *ตัวอย่างผลลัพธ์ — LLM ไม่ได้ตอบเหมือนเดิมทุกครั้ง* (ตัวเลขเวลาขึ้นกับเครือข่าย)
+รัน `pnpm play 8-N` — ผลลัพธ์คือ *ตัวอย่างผลลัพธ์ — LLM ไม่ได้ตอบเหมือนเดิมทุกครั้ง* (ตัวเลขเวลาขึ้นกับเครือข่าย; ตรวจกับ Groq `openai/gpt-oss-20b`)
 
 ### 08-01 invoke() vs stream()
 ```
@@ -101,11 +101,13 @@ AI: หนึ่ง, สอง, สาม, สี่, ห้า, หก, เจ�
 
 ### 08-03 Combine Message Chunks
 ```
-ข้อความรวม: 1. มะม่วง  2. ส้มโอ  3. มะละกอ
-usage_metadata (รวมทั้งหมด): undefined      ← ขึ้นกับ provider: Groq แบบสตรีมไม่ส่ง usage มาให้ใน chunk
+ข้อความรวม: - มะม่วง - ส้ม - สับปะรด
+usage_metadata: undefined
+response_metadata.usage: { input_tokens: 84, output_tokens: 35, total_tokens: 238, … completion_tokens_details: { reasoning_tokens: 9 } }
 finish_reason: stop
 ```
-> ถ้าต้องนับ token ตอนสตรีม อย่าพึ่ง `usage_metadata` — ตรวจก่อนว่า provider ส่งมาไหม
+> `@langchain/groq` 1.3.2 ใส่ usage ไว้ที่ `response_metadata.usage` ไม่ใช่ `usage_metadata` (เป็นเรื่องของ integration ไม่ใช่ provider ไม่ส่ง)
+> และหลัง `concat` ค่า `total_tokens` **ถูกบวกซ้ำ** (238 แต่ input+output = 119) — ถ้าต้องนับ token ให้ใช้ `input_tokens + output_tokens` ไม่ใช้ `total_tokens` ที่ผ่านการ concat
 
 ### 08-04 Streaming Pipeline
 ```
@@ -159,7 +161,8 @@ maxConcurrency=4        → ทำพร้อมกันสูงสุด 4 �
 | retry ทุก error | แยกชนิด error ไม่ออก | retry เฉพาะ 429/5xx |
 | batch ล้มทั้งชุดเพราะ 1 รายการ | ไม่ใช้ `returnExceptions` | ใช้ `returnExceptions: true` แล้วตรวจแต่ละผล |
 | ใส่ `RunnableLambda` ท้าย chain แล้วสตรีมหาย | ชิ้นนั้นรอ input ครบ | แปลงผลที่ฝั่งผู้รับ |
-| `usage_metadata` เป็น `undefined` ตอนสตรีม | provider ไม่ส่ง usage ใน stream | อย่าพึ่งค่านี้สำหรับคิดค่าใช้จ่าย |
+| `usage_metadata` เป็น `undefined` ตอนสตรีม | integration (Groq) เก็บ usage ที่ `response_metadata.usage` | อ่านจาก `response_metadata.usage`; ไม่ใช้ `total_tokens` หลัง `concat` (บวกซ้ำ) |
+| `batch(…, { returnExceptions: true })` บน chain หลายขั้นตอนได้ error แปลกๆ (`reading 'reduce'`) | LangChain แทน error จริงด้วย TypeError | ห่อแต่ละรายการด้วย `RunnableLambda` ที่ try/catch เอง (ดู `batch-translate.ts`) |
 | readline ค้าง/crash เมื่อรับ input ผ่าน pipe | stdin ปิดก่อนจบ | ใช้ `for await` บน readline และ flag `closed` |
 
 ## 9. Best Practices
@@ -186,6 +189,7 @@ maxConcurrency=4        → ทำพร้อมกันสูงสุด 4 �
 - `batch()` + `maxConcurrency` เร็วกว่า loop และปลอดภัยต่อ rate limit; `returnExceptions` กัน batch ล่ม
 - 429 → exponential backoff (เฉพาะ error ชั่วคราว); ยกเลิกด้วย `AbortController`
 - ชิ้นส่วนที่ต้องรอ input ครบทำให้สตรีมหาย
+- retry ต้องอยู่ใต้ตัวจำกัด concurrency เดียวกัน และ retry เฉพาะ 429/5xx
 
 ## 13. Knowledge Check
 

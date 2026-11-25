@@ -12,6 +12,8 @@ for await (const chunk of await model.stream("ผลไม้ไทย 3 ชน�
 }
 
 console.log("ข้อความรวม:", messageText(full!).trim());
-console.log("usage_metadata (รวมทั้งหมด):", full!.usage_metadata);
+// @langchain/groq 1.3.2 ใส่ usage ไว้ใน response_metadata.usage (usage_metadata อาจเป็น undefined) — ตรวจจริงก่อนใช้
+console.log("usage_metadata:", full!.usage_metadata);
+console.log("response_metadata.usage:", full!.response_metadata?.usage);
 console.log("finish_reason:", full!.response_metadata?.finish_reason);
 // ใช้ full เป็น AIMessage ต่อได้ เช่น เก็บเข้า history ของแชต

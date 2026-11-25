@@ -48,6 +48,8 @@ pnpm play 04-01    # เหมือนกัน
 | 5 | 17–19 | Middleware & HITL, Testing, Backend | Phase 3 |
 | 6 | 20 | Capstone: AI Personal Task Manager | Phase 3 |
 
+> หมายเหตุ: ทดสอบบน macOS/Linux เท่านั้น — `pnpm play` ยังไม่รองรับ Windows (ใช้ WSL)
+
 ## คำสั่งสำหรับ repo
 
 ```bash
