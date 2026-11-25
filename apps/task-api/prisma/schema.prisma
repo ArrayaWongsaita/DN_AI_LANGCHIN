@@ -1,0 +1,129 @@
+// Schema ของ Task API (Part 19–20) — แก้ไฟล์นี้แล้วรัน `pnpm migrate` เพื่อสร้าง migration
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum TaskStatus {
+  Pending
+  InProgress
+  Completed
+}
+
+enum TaskPriority {
+  Low
+  Medium
+  High
+}
+
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         String   @default("user") // "user" | "admin"
+  locale       String   @default("th") // "th" | "en"
+  createdAt    DateTime @default(now())
+  tasks        Task[]
+  conversations Conversation[]
+  documents     KnowledgeDocument[]
+}
+
+model Task {
+  id          String       @id @default(uuid())
+  title       String
+  description String?
+  status      TaskStatus   @default(Pending)
+  priority    TaskPriority @default(Medium)
+  dueDate     DateTime?
+  userId      String
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([userId, status])
+  @@index([userId, dueDate])
+}
+
+model Conversation {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  approvals Approval[]
+
+  @@index([userId, updatedAt])
+}
+
+/// คำขออนุมัติที่ agent หยุดรอ (HITL) — เก็บใน DB เพื่อให้ตัดสินใจได้ครั้งเดียว (idempotent) และตรวจย้อนหลังได้
+model Approval {
+  id             String       @id @default(uuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  userId         String
+  actions        Json // [{ name, args }]
+  status         String       @default("pending") // pending | resolving | decided | stale
+  decision       String?
+  result         Json?
+  createdAt      DateTime     @default(now())
+  decidedAt      DateTime?
+
+  @@index([conversationId, status])
+}
+
+model AuditLog {
+  id             String   @id @default(uuid())
+  userId         String
+  conversationId String?
+  action         String
+  detail         Json
+  createdAt      DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+/// หนึ่งแถวต่อการเรียก chat/approval: ใช้ดูต้นทุน (token) และเวลาตอบ
+model UsageLog {
+  id           String   @id @default(uuid())
+  userId       String
+  route        String
+  status       Int
+  ms           Int
+  inputTokens  Int      @default(0)
+  outputTokens Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+/// เอกสารความรู้ที่ผู้ใช้อัปโหลด (txt/md) — แบ่งเป็น chunk แล้วเก็บ vector ใน DocumentChunk
+model KnowledgeDocument {
+  id        String          @id @default(uuid())
+  userId    String
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  source    String
+  createdAt DateTime        @default(now())
+  chunks    DocumentChunk[]
+
+  @@index([userId, createdAt])
+}
+
+/// embedding เป็นคอลัมน์ pgvector (Prisma อ่าน/เขียนตรงๆ ไม่ได้ ใช้ raw SQL ใน KnowledgeService เท่านั้น)
+model DocumentChunk {
+  id         String                 @id @default(uuid())
+  documentId String
+  document   KnowledgeDocument      @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  idx        Int
+  content    String
+  embedding  Unsupported("vector(768)")?
+  metadata   Json?
+
+  @@index([documentId])
+}

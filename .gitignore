@@ -6,3 +6,7 @@ node_modules/
 dist/
 *.log
 .DS_Store
+apps/*/src/generated/
+apps/web/.next/
+.next/
+*.tsbuildinfo

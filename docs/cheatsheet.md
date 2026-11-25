@@ -167,6 +167,73 @@ const r = await agent.invoke({ messages: [{ role: "user", content: "…" }] }, {
 const r = await answerWithRag({ question, retriever, model });   // r.answer, r.sources
 ```
 
+## Middleware & Human-in-the-Loop (Part 17)
+| API | ใช้ทำอะไร |
+|---|---|
+| `createMiddleware({ name, beforeAgent, beforeModel, wrapModelCall, afterModel, wrapToolCall, afterAgent, stateSchema })` | ชั้นคั่นรอบ agent loop; `before*/after*` คืน state update หรือ `undefined`; `beforeModel: { canJumpTo: ["end"], hook }` + `jumpTo: "end"` = จบทันที |
+| `createAgent({ contextSchema, middleware: [A, B] })` + `invoke(input, { context })` | runtime context (ไม่เก็บใน state); ตัวแรกใน array = ชั้นนอกสุด |
+| `request.runtime.context` (middleware) · `tool(fn, …)` พารามิเตอร์ที่ 2 `.context` (tool) | อ่าน `userId`/`role` ที่ระบบส่งมา |
+| `modelRetryMiddleware` · `modelFallbackMiddleware(model)` · `toolCallLimitMiddleware({ runLimit, exitBehavior })` · `modelCallLimitMiddleware` | reliability สำเร็จรูป |
+| `humanInTheLoopMiddleware({ interruptOn: { deleteTask: { allowedDecisions } } })` | หยุดรออนุมัติ (ต้องมี checkpointer + thread_id) |
+| `r.__interrupt__[0].value.actionRequests` · `agent.invoke(new Command({ resume: { decisions: [{ type: "approve" }] } }), config)` | อ่านคำขอ / resume (`approve` · `edit` + `editedAction` · `reject` + `message`) |
+| `src/middleware/*` (`createApprovalMiddleware`, `createRoleBasedToolMiddleware`, `createAuditMiddleware` …) | ชุดที่ใช้ซ้ำใน Part 17–20 |
+```ts
+const agent = createAgent({ model, tools, contextSchema, checkpointer,
+  middleware: [createToolErrorMiddleware(), createAuditMiddleware(audit), createRoleBasedToolMiddleware(),
+               ...createApprovalMiddleware({ requireFor: ["deleteTask"], recheck })] });
+```
+ข้อควรจำ: middleware หลายตัวทำให้นับ step ของกราฟเพิ่ม → `recursionLimit` ต้องสูงขึ้น (เพดานจริงคือ call limit) · middleware ≠ authorization
+
+## Testing & Evaluation (Part 18)
+| API | ใช้ทำอะไร |
+|---|---|
+| `tool.invoke(input, { context: { userId } })` | unit test tool ตรงๆ (ไม่ต้องมี model) |
+| `createScriptedChatModel([...AIMessage])` → `.seenMessages`, `.calls` | model ปลอม (ส่งคืน `AIMessageChunk` เพื่อใช้กับ `withStructuredOutput` ได้) |
+| `createFakeWeatherApi({ failTimes })` · `createFlakyModel(model, n)` | API/model ปลอมที่ล้มตามสั่ง |
+| `assertTrajectory(messages, [{ name, args? }], { ordered })` · `extractToolCalls` | ตรวจลำดับ tool call |
+| `runEval(cases, runAgent, evaluators)` → `{ pass, total, byCase }` | รันชุดทดสอบ (agent พังกรณีหนึ่งไม่ล้มทั้งชุด) |
+| evaluators: `toolSelection` `toolArgs` `ruleBased` `schemaValid` `mutations` `approvalGate` `terminated` `tokenBudget` `llmJudge(model)` | ตรวจต่างมิติ; คืน `null` = ไม่เกี่ยว |
+| `requireLangSmith()` · `withTracingGuard(fn)` | เปิด tracing เฉพาะเมื่อมี key / ไม่ให้ error ของ LangSmith ทำ agent พัง |
+| `new Client()` (`langsmith`) → `hasDataset`, `createDataset`, `createExamples`, `listExamples`, `readRun` | dataset / อ่าน trace |
+| `evaluate(target, { data, evaluators, experimentPrefix, maxConcurrency })` (`langsmith/evaluation`) | รัน experiment; evaluator รับ `{ inputs, outputs, referenceOutputs }` |
+| config ตอน invoke: `{ runName, tags, metadata, runId }` | ตั้งชื่อ/กรอง/อ้างอิง trace |
+| `await awaitAllCallbacks()` (`@langchain/core/callbacks/promises`) | รอ trace ส่งก่อนโปรแกรมจบ |
+env: `LANGSMITH_API_KEY` · `LANGSMITH_TRACING=true|false` · `LANGSMITH_PROJECT` · `EVAL_PROVIDER=deepseek` (ตัวอย่าง 18-12/13)
+ข้อควรจำ: free plan จำกัด trace → ปิดเป็นค่าเริ่มต้น; ผลวัดที่ไม่ครบ (429) ห้ามอ่านเป็นผ่าน; Groq free มีโควตา **รายวัน** 200,000 token
+
+## Backend Integration (Part 19 — apps/task-api)
+| เรื่อง | ใช้อย่างไร |
+|---|---|
+| DI ใน Nest (tsx/vitest) | `constructor(@Inject(Service) private readonly s: Service)` — ไม่มี `design:paramtypes` ต้องระบุ token เอง |
+| ฉีด model | `provide: CHAT_MODEL` + `overrideProvider(CHAT_MODEL).useFactory(() => createScriptedChatModel([...]))` |
+| ตัวตน → agent | `JwtGuard` → `buildRuntimeContext(user)` → `agent.invoke(input, { context, configurable: { thread_id } })`; tool อ่าน `runtime.context.userId` |
+| thread id | `user:<userId>:conv:<conversationId>` + `assertThreadOwner` |
+| ประวัติแชท | `agent.getState({ configurable: { thread_id } })` → `values.messages` |
+| SSE | `agent.stream(input, { streamMode: ["messages","updates"], signal })`; `res.on("close", () => abort.abort())`; `event: x\ndata: {json}\n\n` |
+| HITL ฝั่ง server | `result.__interrupt__[0].value.actionRequests` → เก็บตาราง Approval → `new Command({ resume: { decisions } })` |
+| approval idempotent | `updateMany({ where: { id, status: "pending" }, data: { status: "resolving" } })` ผู้ชนะ = `count === 1` |
+| MCP | `new MCPAdapter({ servers: { x: { command, args, env } } })` → `await adapter.listTools()` (ชื่อ `x_tool`) → `await adapter.close()` |
+| MCP server | `new McpServer({name,version})` + `registerTool(name, { description, inputSchema: z.object() }, handler)` + `StdioServerTransport` (`@modelcontextprotocol/server`) |
+| Prisma 7 | `new PrismaClient({ adapter: new PrismaPg({ connectionString }) })`; URL ใน `prisma.config.ts`; CLI ผ่าน `node --env-file` |
+| error → HTTP | provider 429 / `tool_use_failed` → 503, timeout → 504, อื่นๆ → 500 ข้อความไทยกลาง ไม่ส่ง `err.message` |
+
+## Capstone (Part 20 — apps/task-api + apps/task-web)
+
+```bash
+pnpm app:api / pnpm app:web            # เริ่ม API / เว็บ
+pnpm --filter task-api test            # 110 spec (DB จริง + model ปลอม)
+pnpm --filter task-web test            # 25 test (SSE parser, reducer, dialog, api client)
+git tag -l 'milestone-*'               # 13 milestone
+```
+| เรื่อง | จำ |
+|---|---|
+| ตัวตน | JWT มีแค่ `sub`; role/locale อ่านจาก DB; tool schema ไม่มี `userId` |
+| RAG | chunk 500/50, ทิ้ง <20 ตัว, `embedding <=> $1::vector`, ตัดที่ distance ≤ 0.35, ไม่เจอ = NOT_FOUND ไม่เรียก LLM |
+| HITL | ค้างอนุมัติ = 409 กับข้อความใหม่; stale approval ปิด thread ด้วย reject |
+| SSE (web) | `TextDecoder({stream:true})` กันอักษรไทยแตก; abort = ปุ่มหยุด |
+| Eval | ชุดต้อง *ตก* กับ agent ถดถอย (`regressedRunner`) ไม่ใช่แค่ผ่านกับของดี |
+| ขึ้น prod | `migrate deploy`; MemorySaver/Store/rate limit อยู่ใน RAM = instance เดียว; `NEXT_PUBLIC_*` เปิดเผยในเบราว์เซอร์ |
+
 ## Docker / PostgreSQL / Gemini setup (Phase 2)
 ```bash
 docker compose up -d --wait        # pgvector/pgvector:0.8.0-pg17 พอร์ต 5435 (pnpm db:up)

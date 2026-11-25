@@ -1,2 +1,12 @@
+packages:
+  - apps/*
 allowBuilds:
+  '@prisma/engines': true
   esbuild: true
+  prisma: true
+minimumReleaseAgeExclude:
+  - '@nestjs/common@12.6.1'
+  - '@nestjs/core@12.6.1'
+  - '@nestjs/platform-express@12.6.1'
+  - '@nestjs/testing@12.6.1'
+  - '@types/react@19.3.2'

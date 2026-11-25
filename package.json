@@ -9,7 +9,11 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "db:up": "docker compose up -d --wait",
-    "db:down": "docker compose down"
+    "db:down": "docker compose down",
+    "app:api": "pnpm --filter task-api start",
+    "app:api:test": "pnpm --filter task-api test",
+    "app:web": "pnpm --filter task-web dev",
+    "app:web:test": "pnpm --filter task-web test"
   },
   "devDependencies": {
     "@types/node": "26.6.6",
@@ -31,6 +35,7 @@
     "@langchain/textsplitters": "1.0.2",
     "d3-dsv": "3.0.1",
     "langchain": "1.6.8",
+    "langsmith": "0.14.0",
     "pdf-parse": "2.4.5",
     "pg": "8.23.1",
     "zod": "4.6.7"
