@@ -13,14 +13,19 @@ export const fallbackModelProvider: Provider = {
   useFactory: async (): Promise<BaseChatModel | null> => {
     const provider = process.env.AI_FALLBACK_PROVIDER as ProviderName | undefined;
     if (!provider) return null;
-    return createChatModel({ provider, maxTokens: 1500, ...(provider === "deepseek" ? { thinking: false } : {}) });
+    return createChatModel(chatModelOptions(provider));
   },
 };
+
+/** ค่าตั้งของ chat model ในแอป — ปิด thinking กับ tokenme/deepseek (reasoning กินเพดาน token จนตอบไม่ทัน และ DeepSeek ใช้ tool_choice ไม่ได้) */
+export function chatModelOptions(provider: ProviderName) {
+  return { provider, maxTokens: 1500, ...(provider === "deepseek" || provider === "tokenme" ? { thinking: false } : {}) };
+}
 
 export const chatModelProvider: Provider = {
   provide: CHAT_MODEL,
   useFactory: async (): Promise<BaseChatModel> => {
     const provider = (process.env.AI_PROVIDER as ProviderName | undefined) ?? "tokenme";
-    return createChatModel({ provider, maxTokens: 1500, ...(provider === "deepseek" ? { thinking: false } : {}) });
+    return createChatModel(chatModelOptions(provider));
   },
 };

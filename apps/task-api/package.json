@@ -13,7 +13,8 @@
     "migrate": "node --env-file=../../.env ./node_modules/prisma/build/index.js migrate dev",
     "generate": "node --env-file=../../.env ./node_modules/prisma/build/index.js generate",
     "db:create": "tsx --env-file=../../.env scripts/create-db.ts",
-    "postinstall": "node ./node_modules/prisma/build/index.js generate"
+    "postinstall": "node ./node_modules/prisma/build/index.js generate",
+    "eval:summary": "tsx --env-file=../../.env eval/summary-eval.ts"
   },
   "dependencies": {
     "@langchain/core": "1.5.1",
