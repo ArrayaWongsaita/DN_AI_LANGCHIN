@@ -8,6 +8,7 @@ import { messageText } from "../src/utils/text.js";
 const saved = { ...process.env };
 beforeEach(() => {
   delete process.env.TEST_KEY;
+  delete process.env.TOKENME_API_KEY;
   delete process.env.GROQ_API_KEY;
   delete process.env.DEEPSEEK_API_KEY;
 });
@@ -53,8 +54,12 @@ describe("messageText", () => {
 });
 
 describe("createChatModel", () => {
+  test("default provider (tokenme) without key throws the requireEnv message", async () => {
+    await expect(createChatModel()).rejects.toThrow(/Missing env var TOKENME_API_KEY/);
+  });
+
   test("groq without key throws the requireEnv message", async () => {
-    await expect(createChatModel()).rejects.toThrow(/Missing env var GROQ_API_KEY/);
+    await expect(createChatModel({ provider: "groq" })).rejects.toThrow(/Missing env var GROQ_API_KEY/);
   });
 
   test("deepseek without key throws the requireEnv message", async () => {

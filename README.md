@@ -11,7 +11,7 @@
 
 ```bash
 pnpm install
-cp .env.example .env     # แล้วใส่ API key (GROQ_API_KEY เป็นตัวหลัก, ฟรี)
+cp .env.example .env     # แล้วใส่ API key (TOKENME_API_KEY เป็นตัวหลัก)
 pnpm play                # ดูวิธีใช้
 ```
 
@@ -29,8 +29,8 @@ pnpm play 04-01    # เหมือนกัน
 
 ## Model ที่ใช้ในหลักสูตร
 
-- **Groq** `openai/gpt-oss-20b` (free tier) — ตัวหลัก
-- **DeepSeek** — provider ตัวที่สอง (ใช้สาธิตการสลับ provider)
+- **TokenMe** `deepseek-ai/deepseek-v4.1-flash-1017` (OpenAI-compatible gateway) — ตัวหลักที่ `createChatModel()` ใช้เป็นค่าเริ่มต้น
+- **Groq** `openai/gpt-oss-20b` และ **DeepSeek** — ตัวเลือกสำรอง (`provider: "groq"` / `"deepseek"` หรือ `AI_PROVIDER`)
 - **Google Gemini embeddings** — ใช้ใน Part 14–16 (Phase 2)
 
 ## สถานะ

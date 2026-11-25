@@ -1,5 +1,5 @@
 // 01-03: Direct API vs LangChain Concept
-// แนวคิด: ทำงานเดียวกัน (ถามคำถาม) กับ 2 provider
+// แนวคิด: ทำงานเดียวกัน (ถามคำถาม) กับหลาย provider
 //   - แบบ Direct API: ต้องรู้ URL / key / รูปแบบของแต่ละ provider เอง
 //   - แบบ LangChain: เปลี่ยนแค่ชื่อ provider
 import { createChatModel, type ProviderName } from "../../src/models/index.js";
@@ -10,6 +10,7 @@ const question = "บอกชื่อเมืองหลวงของไ�
 
 // ---------- แบบ Direct API: ต้องเขียนแยกต่อ provider ----------
 const ENDPOINTS = {
+  tokenme: { url: "https://api.tokenme.limited/api/v1/chat/completions", model: "deepseek-ai/deepseek-v4.1-flash-1017", key: "TOKENME_API_KEY" },
   groq: { url: "https://api.groq.com/openai/v1/chat/completions", model: "openai/gpt-oss-20b", key: "GROQ_API_KEY" },
   deepseek: { url: "https://api.deepseek.com/chat/completions", model: "deepseek-flash", key: "DEEPSEEK_API_KEY" },
 } as const;
@@ -32,7 +33,7 @@ async function askLangChain(provider: ProviderName): Promise<string> {
   return messageText(await model.invoke(question));
 }
 
-for (const provider of ["groq", "deepseek"] as const) {
+for (const provider of ["tokenme", "groq", "deepseek"] as const) {
   console.log(`\n=== ${provider} ===`);
   console.log("Direct   :", await askDirect(provider));
   console.log("LangChain:", await askLangChain(provider));
