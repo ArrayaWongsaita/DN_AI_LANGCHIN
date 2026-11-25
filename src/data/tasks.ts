@@ -86,7 +86,8 @@ function userIdOf(runtime: RuntimeLike): string {
   return id;
 }
 
-export function createTaskTools(store: TaskStore) {
+/** tool ทั้งสี่ตัวแบบมีชื่อ (สะดวกเวลาทดสอบทีละตัว) — `all` ใช้ส่งให้ agent */
+export function createTaskToolset(store: TaskStore) {
   const getTasks = tool(
     async (_input, runtime) => JSON.stringify(store.list(userIdOf(runtime as RuntimeLike))),
     { name: "getTasks", description: "ดูรายการ task ทั้งหมดของผู้ใช้ปัจจุบัน", schema: z.object({}) },
@@ -130,5 +131,9 @@ export function createTaskTools(store: TaskStore) {
     },
   );
 
-  return [getTasks, createTask, updateTask, deleteTask];
+  return { getTasks, createTask, updateTask, deleteTask, all: [getTasks, createTask, updateTask, deleteTask] };
+}
+
+export function createTaskTools(store: TaskStore) {
+  return createTaskToolset(store).all;
 }

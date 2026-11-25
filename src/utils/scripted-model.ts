@@ -1,5 +1,5 @@
 import { BaseChatModel } from "@langchain/core/language_models/chat_models";
-import { AIMessage, type BaseMessage } from "@langchain/core/messages";
+import { AIMessage, AIMessageChunk, type BaseMessage } from "@langchain/core/messages";
 import type { ChatResult } from "@langchain/core/outputs";
 
 class ScriptedChatModel extends BaseChatModel {
@@ -22,7 +22,16 @@ class ScriptedChatModel extends BaseChatModel {
     this.seenMessages.push(messages);
     const next = this.script[this.calls++];
     if (!next) throw new Error(`Scripted model: script exhausted after ${this.script.length} response(s)`);
-    return { generations: [{ text: typeof next.content === "string" ? next.content : "", message: next }] };
+    // withStructuredOutput() ของ langchain-core คาดหวัง AIMessageChunk — แปลงให้ (ยังเป็น message ชนิด "ai" เหมือนเดิม)
+    const message = new AIMessageChunk({
+      content: next.content,
+      tool_calls: next.tool_calls,
+      additional_kwargs: next.additional_kwargs,
+      response_metadata: next.response_metadata,
+      usage_metadata: next.usage_metadata,
+      id: next.id,
+    });
+    return { generations: [{ text: typeof next.content === "string" ? next.content : "", message }] };
   }
 }
 
