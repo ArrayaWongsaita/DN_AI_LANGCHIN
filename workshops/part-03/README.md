@@ -6,7 +6,7 @@
 ส่ง prompt เดียวกันไปยัง model/config ที่ต่างกัน แล้วเปรียบเทียบ **คุณภาพ ความเร็ว และ token usage**
 
 ## Requirements
-1. ทดสอบอย่างน้อย 4 ชุด: temperature ต่างกัน (0, 1), model ต่างขนาด (20b, 120b), provider ต่างกัน (Groq, DeepSeek)
+1. ทดสอบอย่างน้อย 4 ชุด: temperature ต่างกัน (0, 1), model ต่างกัน (deepseek-v4.1-flash, qwen3.8-27b), provider ต่างกัน (TokenMe, Groq, DeepSeek)
 2. วัดเวลาด้วย `performance.now()` และอ่าน token จาก `usage_metadata`
 3. แสดงผลเป็นตาราง (`console.table`) พร้อมคำตอบของแต่ละชุด
 4. ถ้า provider ใดไม่มี key ให้ข้ามพร้อมข้อความ ไม่ crash
@@ -19,12 +19,15 @@ pnpm exec tsx --env-file=.env workshops/part-03/solution/compare.ts
 
 ## Expected Output (ตัวอย่าง)
 ```
-┌─────────┬─────────────────────────┬───────────┬───────┬────────┬───────┬────────┐
-│ (index) │ config                  │ เวลา (ms) │ input │ output │ total │ finish │
-│ 0       │ 'groq gpt-oss-20b t=0'  │ 622       │ 101   │ 120    │ 221   │ 'stop' │
-│ 1       │ 'groq gpt-oss-20b t=1'  │ 571       │ 101   │ 158    │ 259   │ 'stop' │
-│ 2       │ 'groq gpt-oss-120b t=0' │ 885       │ 101   │ 197    │ 298   │ 'stop' │
-│ 3       │ 'deepseek-flash t=0'    │ 2190      │ 56    │ 281    │ 337   │ 'stop' │
+┌─────────┬───────────────────────────┬───────────┬───────┬────────┬───────┬────────┐
+│ (index) │ config                    │ เวลา (ms) │ input │ output │ total │ finish │
+├─────────┼───────────────────────────┼───────────┼───────┼────────┼───────┼────────┤
+│ 0       │ 'tokenme v4.1-flash t=0'  │ 3122      │ 30    │ 103    │ 133   │ 'stop' │
+│ 1       │ 'tokenme v4.1-flash t=1'  │ 4449      │ 30    │ 105    │ 135   │ 'stop' │
+│ 2       │ 'tokenme qwen3.8-27b t=0' │ 5971      │ 30    │ 55     │ 85    │ 'stop' │
+│ 3       │ 'groq gpt-oss-20b t=0'    │ 447       │ 101   │ 120    │ 221   │ 'stop' │
+│ 4       │ 'deepseek-flash t=0'      │ 1697      │ 30    │ 105    │ 135   │ 'stop' │
+└─────────┴───────────────────────────┴───────────┴───────┴────────┴───────┴────────┘
 ```
 
 ## Acceptance Criteria

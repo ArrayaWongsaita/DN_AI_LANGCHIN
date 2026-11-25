@@ -1,7 +1,7 @@
 # Part 16 — Retrieval-Augmented Generation (RAG)
 
 ระดับ: Intermediate–Advanced · เวลา: 120 นาที · ตัวอย่าง: `examples/part-16/` · ข้อมูล: `data/curriculum/` · Workshop: `workshops/part-16/`
-ต้องมี `docker compose up -d --wait` (pgvector), `GOOGLE_API_KEY` (embedding) และ `GROQ_API_KEY` (โมเดลตอบ) — 16-05 ไม่เรียกอะไรเลย; ตัวอย่างที่เหลือ index เอกสารครั้งแรกครั้งเดียว (20 chunk) แล้วใช้ซ้ำ
+ต้องมี `docker compose up -d --wait` (pgvector), `GOOGLE_API_KEY` (embedding) และ `TOKENME_API_KEY` (โมเดลตอบ; สลับเป็น `GROQ_API_KEY`/`DEEPSEEK_API_KEY` ได้) — 16-05 ไม่เรียกอะไรเลย; ตัวอย่างที่เหลือ index เอกสารครั้งแรกครั้งเดียว (20 chunk) แล้วใช้ซ้ำ
 
 ## 1. Introduction
 
@@ -76,7 +76,7 @@ flowchart TB
 
 ## 7. Coding Examples
 
-รัน `pnpm play 16-N` (ผลจาก Groq `openai/gpt-oss-20b` + Gemini embeddings จริง; LLM ไม่ตอบเหมือนเดิมทุกครั้ง)
+รัน `pnpm play 16-N` (ผลบันทึกจาก Groq `openai/gpt-oss-20b` + Gemini embeddings จริง แล้วรันซ้ำบน TokenMe ผ่าน; LLM ไม่ตอบเหมือนเดิมทุกครั้ง)
 
 **16-01 Manual Context Injection** — ดูหัวข้อ 4
 **16-02 Basic Retrieval** (ยังไม่ใช้ LLM)

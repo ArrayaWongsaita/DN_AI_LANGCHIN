@@ -57,7 +57,7 @@ pnpm play 04-01    # เหมือนกัน
 ## ตั้งค่าเพิ่มสำหรับ Phase 2 (Part 12–16)
 
 ```bash
-cp .env.example .env     # ใส่ GROQ_API_KEY / DEEPSEEK_API_KEY / GOOGLE_API_KEY (embeddings) และ DATABASE_URL
+cp .env.example .env     # ใส่ TOKENME_API_KEY / GOOGLE_API_KEY (embeddings) (GROQ_API_KEY / DEEPSEEK_API_KEY เป็นทางเลือก) และ DATABASE_URL
 pnpm db:up               # docker compose up -d --wait  (PostgreSQL 17 + pgvector, พอร์ต 5435)
 pnpm db:down             # หยุด (ข้อมูลอยู่ใน volume; ลบด้วย docker compose down -v)
 ```
@@ -77,7 +77,7 @@ pnpm db:up && pnpm --filter task-api db:create && pnpm --filter task-api migrate
 pnpm app:api     # NestJS API  (PORT=3000; ชนพอร์ตให้ตั้ง PORT=3010)
 pnpm app:web     # Next.js http://localhost:3001  (NEXT_PUBLIC_API_URL ชี้ไปที่ API)
 ```
-`.env` ต้องมี `TASK_API_DATABASE_URL`, `JWT_SECRET`, key ของ model (`GROQ_API_KEY` หรือ `DEEPSEEK_API_KEY` + `AI_PROVIDER`) และ `GOOGLE_API_KEY` สำหรับ embeddings — ดูเนื้อหาและ checklist ที่ [`parts/20-capstone`](parts/20-capstone/README.md), สรุปผลที่ [`docs/phase-3-report.md`](docs/phase-3-report.md)
+`.env` ต้องมี `TASK_API_DATABASE_URL`, `JWT_SECRET`, key ของ model (`TOKENME_API_KEY` เป็นค่าเริ่มต้น หรือ `GROQ_API_KEY`/`DEEPSEEK_API_KEY` + `AI_PROVIDER`) และ `GOOGLE_API_KEY` สำหรับ embeddings — ดูเนื้อหาและ checklist ที่ [`parts/20-capstone`](parts/20-capstone/README.md), สรุปผลที่ [`docs/phase-3-report.md`](docs/phase-3-report.md)
 
 ## คำสั่งสำหรับ repo
 

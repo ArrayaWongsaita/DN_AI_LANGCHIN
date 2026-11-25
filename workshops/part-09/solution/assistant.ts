@@ -1,5 +1,5 @@
 // Workshop 09 — เฉลย: AI Assistant ที่มี 6 tools (tool calling 1 รอบ)
-// ใช้: pnpm exec tsx --env-file=.env workshops/part-09/solution/assistant.ts "<คำถาม>" [groq|deepseek]
+// ใช้: pnpm exec tsx --env-file=.env workshops/part-09/solution/assistant.ts "<คำถาม>" [tokenme|groq|deepseek]
 import { HumanMessage, SystemMessage, type BaseMessage } from "@langchain/core/messages";
 import type { BaseChatModel } from "@langchain/core/language_models/chat_models";
 import { executeToolCalls } from "../../../src/agents/execute-tools.js";
@@ -25,8 +25,8 @@ export async function askAssistant(model: BaseChatModel, question: string): Prom
 
 if (isMain(import.meta.url)) {
   const [question, provider] = process.argv.slice(2);
-  if (!question || (provider && provider !== "groq" && provider !== "deepseek")) {
-    console.log('วิธีใช้: assistant.ts "<คำถาม>" [groq|deepseek]');
+  if (!question || (provider && provider !== "tokenme" && provider !== "groq" && provider !== "deepseek")) {
+    console.log('วิธีใช้: assistant.ts "<คำถาม>" [tokenme|groq|deepseek]');
     process.exit(1);
   }
   try {

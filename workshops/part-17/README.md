@@ -23,7 +23,7 @@ pnpm exec tsx --env-file=.env $A --role admin --decision reject  "ลบงา�
 pnpm test tests/part17-workshop.test.ts
 ```
 
-## Expected Output (ตัวอย่างจากการรันจริงบน Groq — LLM ไม่ได้ตอบเหมือนเดิมทุกครั้ง)
+## Expected Output (ตัวอย่างบันทึกจากการรันบน Groq แล้วรันซ้ำบน TokenMe ผ่าน — LLM ไม่ได้ตอบเหมือนเดิมทุกครั้ง)
 ```
 viewer : ขออภัย … คุณสมชายไม่สามารถเพิ่มงานได้ เนื่องจากไม่มีสิทธิ์แก้ไขข้อมูล + แสดง 3 งานที่มี
          Audit: getTasks ok=true            งานที่เหลือ: t1, t2, t3

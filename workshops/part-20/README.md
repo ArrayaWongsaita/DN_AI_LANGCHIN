@@ -9,7 +9,7 @@
 ```bash
 pnpm install && pnpm db:up
 pnpm --filter task-api db:create && pnpm --filter task-api migrate
-# .env: TASK_API_DATABASE_URL, JWT_SECRET (openssl rand -hex 32), DEEPSEEK_API_KEY หรือ GROQ_API_KEY, GOOGLE_API_KEY
+# .env: TASK_API_DATABASE_URL, JWT_SECRET (openssl rand -hex 32), TOKENME_API_KEY (หรือ DEEPSEEK_API_KEY / GROQ_API_KEY + AI_PROVIDER), GOOGLE_API_KEY
 pnpm app:api            # API  (PORT=3000; ถ้าพอร์ตชนให้ตั้ง PORT=3010 และ NEXT_PUBLIC_API_URL ให้ตรง)
 pnpm app:web            # เว็บ http://localhost:3001
 ```

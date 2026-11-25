@@ -66,7 +66,7 @@ if (isMain(import.meta.url)) {
       provider: { type: "string" },
     },
   });
-  const usage = 'ใช้: personal-assistant.ts --user <id> [--conversation <id> | --thread <id เต็ม>] [--pref key=value] [--show-prefs] [--forget] ["ข้อความ"] [--provider groq|deepseek]';
+  const usage = 'ใช้: personal-assistant.ts --user <id> [--conversation <id> | --thread <id เต็ม>] [--pref key=value] [--show-prefs] [--forget] ["ข้อความ"] [--provider tokenme|groq|deepseek]';
   try {
     if (!values.user) throw new Error(usage);
     const userId = values.user;

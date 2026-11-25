@@ -26,7 +26,7 @@ pnpm exec tsx --env-file=.env $A --user bob   --thread "user:alice:conv:c1" "แ
 pnpm test tests/part12-memory.test.ts
 ```
 
-## Expected Output (ตัวอย่างจากการรันจริงบน Groq — แต่ละคำสั่งเป็นโปรเซสแยก)
+## Expected Output (ตัวอย่างบันทึกจากการรันบน Groq แล้วรันซ้ำบน TokenMe ผ่าน — แต่ละคำสั่งเป็นโปรเซสแยก)
 ```
 alice/c1 : บันทึก preference: ภาษา=ตอบสั้นๆ ลงท้ายค่ะ
            สวัสดีค่ะมะลิ รหัสโครงการ ORCHID-42 ได้รับบันทึกแล้วค่ะ.

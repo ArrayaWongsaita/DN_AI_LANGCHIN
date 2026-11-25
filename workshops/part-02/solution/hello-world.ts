@@ -2,12 +2,14 @@
 // รับคำถามจาก Terminal แล้วแสดงคำตอบ; ถ้าเรียก model ไม่สำเร็จให้แจ้งสาเหตุแทนที่จะ crash
 import { createInterface } from "node:readline/promises";
 import { initChatModel } from "langchain/chat_models/universal";
+import { TOKENME_BASE_URL, TOKENME_MODEL } from "../../../src/models/index.js";
 import { requireEnv } from "../../../src/utils/env.js";
 import { messageText } from "../../../src/utils/text.js";
 
-const model = await initChatModel("openai/gpt-oss-20b", {
-  modelProvider: "groq",
-  apiKey: requireEnv("GROQ_API_KEY"),
+const model = await initChatModel(TOKENME_MODEL, {
+  modelProvider: "openai", // TokenMe ใช้รูปแบบเดียวกับ OpenAI — ชี้ baseURL มาที่ TokenMe
+  configuration: { baseURL: TOKENME_BASE_URL },
+  apiKey: requireEnv("TOKENME_API_KEY"),
   maxRetries: 1,
 });
 

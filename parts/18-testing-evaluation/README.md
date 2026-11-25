@@ -1,8 +1,8 @@
 # Part 18 — Testing, Debugging & Evaluation
 
 ระดับ: Advanced · เวลา: 90–120 นาที · ตัวอย่าง: `examples/part-18/` · โค้ดที่ใช้ซ้ำ: `src/eval/` · Workshop: `workshops/part-18/`
-18-01…18-07 และ 18-11 **รันออฟไลน์ได้ ไม่ต้องมี key** · 18-08…18-10, 18-12, 18-13 ต้องมี `LANGSMITH_API_KEY` (free plan พอ) และ model key (Groq/DeepSeek)
-ตัวอย่างที่เรียก model รันจริงบน Groq `openai/gpt-oss-20b` (18-08…18-10, 18-12) และ DeepSeek (18-12 judge, 18-13 ตั้ง `EVAL_PROVIDER=deepseek` เพราะโควตา Groq รายวัน 200,000 token หมดตอนรัน) — ผลลัพธ์ที่ใช้ LLM คือ "ตัวอย่างผลลัพธ์ — LLM ไม่ได้ตอบเหมือนเดิมทุกครั้ง"
+18-01…18-07 และ 18-11 **รันออฟไลน์ได้ ไม่ต้องมี key** · 18-08…18-10, 18-12, 18-13 ต้องมี `LANGSMITH_API_KEY` (free plan พอ) และ model key (`TOKENME_API_KEY` เป็นค่าเริ่มต้น; Groq/DeepSeek ใช้แทนได้)
+ตัวอย่างที่เรียก model — ค่าเริ่มต้นคือ TokenMe (ผลที่วางไว้ด้านล่างบันทึกจาก Groq `openai/gpt-oss-20b` (18-08…18-10, 18-12) และ DeepSeek (18-12 judge, 18-13 ตั้ง `EVAL_PROVIDER=deepseek` เพราะโควตา Groq รายวัน 200,000 token หมดตอนรัน) — ผลลัพธ์ที่ใช้ LLM คือ "ตัวอย่างผลลัพธ์ — LLM ไม่ได้ตอบเหมือนเดิมทุกครั้ง"
 
 ## 1. Introduction
 

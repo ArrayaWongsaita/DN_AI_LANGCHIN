@@ -1,5 +1,5 @@
 // Workshop 11 — เฉลย: AI Shopping Assistant ด้วย createAgent + structured output
-// ใช้: pnpm exec tsx --env-file=.env workshops/part-11/solution/shopping-assistant.ts "<คำถาม>" [groq|deepseek]
+// ใช้: pnpm exec tsx --env-file=.env workshops/part-11/solution/shopping-assistant.ts "<คำถาม>" [tokenme|groq|deepseek]
 import type { BaseChatModel } from "@langchain/core/language_models/chat_models";
 import { createAgent, toolStrategy } from "langchain";
 import { z } from "zod";
@@ -28,8 +28,8 @@ export function buildShoppingAgent(model: BaseChatModel) {
 
 if (isMain(import.meta.url)) {
   const [question, provider] = process.argv.slice(2);
-  if (!question || (provider && provider !== "groq" && provider !== "deepseek")) {
-    console.log('วิธีใช้: shopping-assistant.ts "<คำถาม>" [groq|deepseek]');
+  if (!question || (provider && provider !== "tokenme" && provider !== "groq" && provider !== "deepseek")) {
+    console.log('วิธีใช้: shopping-assistant.ts "<คำถาม>" [tokenme|groq|deepseek]');
     process.exit(1);
   }
   try {

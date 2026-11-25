@@ -6,11 +6,11 @@
 | API | import | ใช้ทำอะไร |
 |---|---|---|
 | `initChatModel` | `langchain/chat_models/universal` | สร้าง chat model จากชื่อ provider (async) |
-| `createChatModel(opts)` | `src/models/index.js` | wrapper ของ repo: เลือก groq/deepseek + ค่าเริ่มต้น (**ต้อง `await`**) |
+| `createChatModel(opts)` | `src/models/index.js` | wrapper ของ repo: เลือก tokenme (ค่าเริ่มต้น)/groq/deepseek (**ต้อง `await`**) |
 | `model.invoke(input)` | — | เรียกครั้งเดียว ได้ `AIMessage` |
-| options | — | `temperature`, `maxTokens` (gpt-oss: รวม reasoning tokens), `timeout`, `maxRetries`, `reasoningEffort`, `thinking:false` (DeepSeek) |
+| options | — | `temperature`, `maxTokens` (gpt-oss: รวม reasoning tokens), `timeout`, `maxRetries`, `reasoningEffort` (Groq), `thinking:false` (TokenMe/DeepSeek) |
 ```ts
-const model = await createChatModel({ provider: "groq", maxTokens: 1500 });
+const model = await createChatModel({ maxTokens: 1500, thinking: false }) // provider เริ่มต้น = tokenme;
 const msg = await model.invoke("สวัสดี");
 ```
 
@@ -88,7 +88,7 @@ const chain = prompt.pipe(model).pipe(new StringOutputParser());
 const add = tool(async ({ a, b }) => String(a + b), { name: "add", description: "บวกเลข", schema: z.object({ a: z.number(), b: z.number() }) });
 const ai = await model.bindTools!([add]).invoke("2+3?");   // ai.tool_calls
 ```
-ข้อควรรู้: Groq gpt-oss ไม่ส่ง parallel tool calls (DeepSeek ส่ง); DeepSeek ต้อง `thinking: false` เมื่อใช้ tools/structured output
+ข้อควรรู้: Groq gpt-oss ไม่ส่ง parallel tool calls (DeepSeek ส่ง); DeepSeek ต้อง `thinking: false` (TokenMe ควรปิดด้วยเมื่อเพดาน token จำกัด) เมื่อใช้ tools/structured output
 
 ## Agent Loop (Part 10)
 | API | ใช้ทำอะไร |

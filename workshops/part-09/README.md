@@ -15,11 +15,11 @@
 
 ## วิธีรัน
 ```bash
-pnpm exec tsx --env-file=.env workshops/part-09/solution/assistant.ts "อากาศที่ภูเก็ตเป็นอย่างไร และ keyboard ราคาเท่าไร" [groq|deepseek]
+pnpm exec tsx --env-file=.env workshops/part-09/solution/assistant.ts "อากาศที่ภูเก็ตเป็นอย่างไร และ keyboard ราคาเท่าไร" [tokenme|groq|deepseek]
 pnpm test tests/part09-tools.test.ts
 ```
 
-## Expected Output (ตัวอย่าง — LLM ไม่ได้ตอบเหมือนเดิมทุกครั้ง; ตรวจบน Groq และ DeepSeek)
+## Expected Output (ตัวอย่าง — LLM ไม่ได้ตอบเหมือนเดิมทุกครั้ง; บันทึกจาก Groq และ DeepSeek แล้วรันซ้ำบน TokenMe ผ่าน)
 ```
 [deepseek] อากาศที่ภูเก็ตเป็นอย่างไร และ keyboard ราคาเท่าไร
 tools: getWeather, searchProduct
@@ -51,7 +51,7 @@ tools: add
 - [ ] เมืองที่ไม่มีข้อมูลได้คำตอบที่สุภาพ ไม่ crash
 - [ ] คำถามทั่วไป ("สวัสดี") ไม่เรียก tool
 - [ ] `pnpm test tests/part09-tools.test.ts` ผ่าน (ครอบคลุม tool ไม่พบ, args ผิด, tool พัง, ไม่มี tool call)
-- [ ] ใช้ได้ทั้ง Groq และ DeepSeek (`thinking:false`)
+- [ ] ใช้ได้ทั้ง TokenMe, Groq และ DeepSeek (`thinking:false`)
 - [ ] อธิบายได้ว่าทำไมคำถามที่ต้องใช้ tool ต่อเนื่องจึงต้องมี loop
 
 เฉลย: [`solution/assistant.ts`](solution/assistant.ts) · ตัวช่วย: [`src/agents/execute-tools.ts`](../../src/agents/execute-tools.ts), [`src/tools/index.ts`](../../src/tools/index.ts)

@@ -1,5 +1,5 @@
 // Workshop 06 — เฉลย: AI Product Extractor
-// ใช้: pnpm exec tsx --env-file=.env workshops/part-06/solution/product-extractor.ts "เสื้อสีดำราคา 350 บาท มีไซซ์ M และ L" [groq|deepseek]
+// ใช้: pnpm exec tsx --env-file=.env workshops/part-06/solution/product-extractor.ts "เสื้อสีดำราคา 350 บาท มีไซซ์ M และ L" [tokenme|groq|deepseek]
 import { isMain } from "../../../src/utils/is-main.js";
 import { createChatModel, type ProviderName } from "../../../src/models/index.js";
 import { productSchema, validateBusinessRules, type Product } from "./product-schema.js";
@@ -26,10 +26,10 @@ export async function extractProduct(text: string, opts: { maxAttempts?: number;
 
 // รันเป็นสคริปต์เมื่อถูกเรียกตรงๆ (ไม่รันเมื่อถูก import)
 if (isMain(import.meta.url)) {
-  // วิธีใช้: product-extractor.ts "<ข้อความ>" [groq|deepseek]
+  // วิธีใช้: product-extractor.ts "<ข้อความ>" [tokenme|groq|deepseek]
   const [text, provider] = process.argv.slice(2);
-  if (!text || (provider && provider !== "groq" && provider !== "deepseek")) {
-    console.log('วิธีใช้: product-extractor.ts "เสื้อสีดำราคา 350 บาท มีไซซ์ M และ L" [groq|deepseek]');
+  if (!text || (provider && provider !== "tokenme" && provider !== "groq" && provider !== "deepseek")) {
+    console.log('วิธีใช้: product-extractor.ts "เสื้อสีดำราคา 350 บาท มีไซซ์ M และ L" [tokenme|groq|deepseek]');
     process.exit(1);
   }
   try {

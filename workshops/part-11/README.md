@@ -15,12 +15,12 @@
 
 ## วิธีรัน
 ```bash
-pnpm exec tsx --env-file=.env workshops/part-11/solution/shopping-assistant.ts "ซื้อ Mechanical Keyboard 2 ตัว กับหูฟังบลูทูธ 1 ชิ้น รวมกี่บาท" [groq|deepseek]
+pnpm exec tsx --env-file=.env workshops/part-11/solution/shopping-assistant.ts "ซื้อ Mechanical Keyboard 2 ตัว กับหูฟังบลูทูธ 1 ชิ้น รวมกี่บาท" [tokenme|groq|deepseek]
 pnpm test tests/part11-shopping.test.ts
 ```
-> Groq free tier จำกัด 8,000 token/นาที — agent ใช้ token มาก ถ้าเจอ 429 ให้รอสักครู่หรือใช้ `deepseek`
+> Groq free tier จำกัด 8,000 token/นาที — agent ใช้ token มาก ถ้าเจอ 429 (เมื่อใช้ Groq) ให้รอสักครู่หรือใช้ `tokenme`/`deepseek`
 
-## Expected Output (ตัวอย่าง — LLM ไม่ได้ตอบเหมือนเดิมทุกครั้ง; ตรวจบน Groq และ DeepSeek)
+## Expected Output (ตัวอย่าง — LLM ไม่ได้ตอบเหมือนเดิมทุกครั้ง; บันทึกจาก Groq และ DeepSeek แล้วรันซ้ำบน TokenMe ผ่าน)
 ```
 [groq] ซื้อ Mechanical Keyboard 2 ตัว กับหูฟังบลูทูธ 1 ชิ้น รวมกี่บาท
 { "items": [ { "name": "Mechanical Keyboard", "quantity": 2, "unitPrice": 2490 },
@@ -44,7 +44,7 @@ pnpm test tests/part11-shopping.test.ts
 - [ ] ยอดรวมถูกต้อง (6,270 บาท สำหรับตัวอย่างหลัก) และ `typeof total === "number"`
 - [ ] สินค้าหมด/ไม่พบไม่ถูกคิดเงินและมี `note`
 - [ ] `pnpm test tests/part11-shopping.test.ts` ผ่าน (10 เทสต์: tool edge case + agent ผ่าน scripted model)
-- [ ] ทำงานได้ทั้ง Groq และ DeepSeek
+- [ ] ทำงานได้ทั้ง TokenMe, Groq และ DeepSeek
 - [ ] อธิบายได้ว่าทำไมต้องตรวจ `structuredResponse` อีกครั้ง (โมเดลอาจใส่ตัวเลขผิด)
 
 เฉลย: [`solution/shopping-assistant.ts`](solution/shopping-assistant.ts) · tools: [`src/tools/shopping.ts`](../../src/tools/shopping.ts)

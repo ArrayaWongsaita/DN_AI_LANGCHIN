@@ -12,7 +12,7 @@ import { DATASET_NAME, EXAMPLE_CASES, countFailedRows, createAgentRunner, create
 requireLangSmith();
 const client = new Client();
 await uploadDataset(client, DATASET_NAME, EXAMPLE_CASES);
-const model = await createEvalModel(); // EVAL_PROVIDER=deepseek เพื่อใช้ DeepSeek แทน Groq
+const model = await createEvalModel(); // EVAL_PROVIDER=deepseek เพื่อใช้ DeepSeek แทน TokenMe (ค่าเริ่มต้น)
 
 const PROMPTS = {
   baseline: "คุณคือผู้ช่วยจัดการงาน ตอบสั้นกระชับ",
