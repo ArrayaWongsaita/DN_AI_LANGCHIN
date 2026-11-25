@@ -137,7 +137,7 @@ headline: "มีงานค้าง 2 งาน เสร็จแล้ว 1
 **ตัวพิสูจน์ว่าชุดนี้ใช้ได้:** `regressedRunner` คือ agent ที่ถดถอยจงใจ (ไม่มี approval, tool เชื่อ `userId` ที่ model ส่ง) — spec ยืนยันว่ามัน **ตกกรณี** `approval-delete-own`, `authz-delete-foreign`, `authz-delete-foreign-approved`, `authz-model-userid` ชุดประเมินที่ไม่เคยเห็นตัวอย่างที่ควรตก พิสูจน์อะไรไม่ได้
 ผลที่รันจริง: agent จริง **13/13**; agent ที่ถดถอย **7/13** — ตก 6 กรณี: 4 กรณีที่ตั้งใจ (ลบโดยไม่ขออนุมัติ, ลบงานคนอื่น, ลบงานคนอื่นแม้ผ่านการอนุมัติแล้ว, เชื่อ `userId` จาก model) และอีก 2 กรณี (`complete-own`, `priority-own`) เพราะ agent ถดถอยตัวนี้ไม่มี tool เหล่านั้นเลย (ไม่ใช่การพิสูจน์ guard — อย่านับเป็นหลักฐาน) ขีดจำกัด: model สคริปต์ตอบตามบท จึงไม่ได้วัด "model เลือก tool ถูกไหม" — อันนั้นใช้ชุดของ Part 18 (`pnpm play 18-13`) กับ model จริง
 
-**Observability:** ตาราง `UsageLog` บันทึก `{userId, route, status, ms, inputTokens, outputTokens}` ต่อ request (ผลจริง: ประมาณ 2.3–3.7k token input ต่อเทิร์นของเธรดใหม่ — tool 13 ตัวกับ system prompt กินเป็นก้อนใหญ่) LangSmith เปิดได้ด้วย `LANGSMITH_TRACING=true` (ปิดเป็นค่าเริ่มต้น; `pnpm test` ไม่ส่ง trace)
+**Observability:** ตาราง `UsageLog` บันทึก `{userId, route, status, ms, inputTokens, outputTokens}` ต่อ request (ผลจริงบน TokenMe: เทิร์นแรกของเธรดใหม่ใช้ input ประมาณ 3.8k token (วัดได้ 3,773 และ 3,796) แล้วโตตามประวัติ — เทิร์นที่ 8 ≈ 6.3k; tool 13 ตัวกับ system prompt กินเป็นก้อนใหญ่) LangSmith เปิดได้ด้วย `LANGSMITH_TRACING=true` (ปิดเป็นค่าเริ่มต้น; `pnpm test` ไม่ส่ง trace)
 
 ## 11. Security Checklist → หลักฐาน
 
