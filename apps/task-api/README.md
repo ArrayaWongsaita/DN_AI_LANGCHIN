@@ -48,7 +48,7 @@ src/
 | 19-10 | SSE streaming | `conversations/conversation-chat.controller.ts` (`token/tool_start/tool_end/approval_required/done/error`, ตัดสายแล้วหยุดงาน) | `part-19-10` |
 | 19-11 | Approval endpoint | `conversations/approvals.service.ts`, `ai/approval.middleware.ts` (idempotent, recheck, audit) | `part-19-11` |
 
-**ข้อจำกัดที่ต้องรู้:** checkpointer เป็น `MemorySaver` (ในหน่วยความจำ — รีสตาร์ทแล้วประวัติ/คำขออนุมัติที่ค้างหาย; Part 19 ต่อไปจะเปลี่ยนเป็น Postgres) · token อายุ 15 นาที ยังไม่มี refresh token
+**ข้อจำกัดที่ต้องรู้:** checkpointer เป็น `MemorySaver` (ในหน่วยความจำ — รีสตาร์ทแล้วประวัติหาย — คำขออนุมัติที่ค้างจะถูกปิดเป็น "หมดอายุ" (409) เมื่อกดอนุมัติ ไม่ล็อกบทสนทนา; ยังไม่ได้ย้ายไป Postgres checkpointer) · token อายุ 15 นาที ยังไม่มี refresh token
 `bash scripts/smoke.sh` = ทดสอบจริงกับ model (ต้องมี key และ DB)
 | 19-12 | MCP server (stdio, read-only) | `mcp/task-mcp-server.ts` | `part-19-12` |
 | 19-13 | MCP client adapter + untrusted data | `mcp/mcp-tools.ts`, `ai/untrusted.middleware.ts` | `part-19-13` |

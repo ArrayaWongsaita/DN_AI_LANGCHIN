@@ -18,4 +18,5 @@ COPY --from=build --chown=node:node /repo /repo
 USER node
 EXPOSE 3001
 WORKDIR /repo/apps/task-web
-CMD ["pnpm", "exec", "next", "start", "--port", "3001"]
+# pnpm ไม่อยู่ใน stage สุดท้าย — เรียก next ตรงๆ
+CMD ["node", "node_modules/next/dist/bin/next", "start", "--port", "3001"]

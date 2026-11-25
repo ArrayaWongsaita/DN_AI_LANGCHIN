@@ -9,3 +9,4 @@ dist/
 apps/*/src/generated/
 apps/web/.next/
 .next/
+*.tsbuildinfo

@@ -20,6 +20,12 @@ export function parseDueDate(input: string | Date): Date {
     if (Number.isNaN(d.getTime()) || d.toISOString().slice(0, 10) !== input) throw new Error("invalid date");
     return d;
   }
+  if (input instanceof Date) {
+    if (Number.isNaN(input.getTime())) throw new Error("invalid date");
+    return dateOnly(bangkokDateString(input));
+  }
+  // datetime ต้องมี offset ชัดเจน (Z หรือ ±hh:mm) — ไม่มี = ขึ้นกับ timezone ของเซิร์ฟเวอร์ จึงปฏิเสธ; รูปแบบอื่น ("Dec 5", "5/12/2026") ไม่เดา
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})$/.test(input)) throw new Error("invalid date");
   const parsed = new Date(input);
   if (Number.isNaN(parsed.getTime())) throw new Error("invalid date");
   return dateOnly(bangkokDateString(parsed));

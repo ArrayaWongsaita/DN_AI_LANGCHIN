@@ -221,7 +221,7 @@ env: `LANGSMITH_API_KEY` · `LANGSMITH_TRACING=true|false` · `LANGSMITH_PROJECT
 
 ```bash
 pnpm app:api / pnpm app:web            # เริ่ม API / เว็บ
-pnpm --filter task-api test            # 93 spec (DB จริง + model ปลอม)
+pnpm --filter task-api test            # 110 spec (DB จริง + model ปลอม)
 pnpm --filter task-web test            # 25 test (SSE parser, reducer, dialog, api client)
 git tag -l 'milestone-*'               # 13 milestone
 ```

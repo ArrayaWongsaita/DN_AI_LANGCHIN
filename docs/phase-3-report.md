@@ -9,7 +9,7 @@
 |---|---|
 | `pnpm typecheck` (root) · `task-web typecheck` | 0 errors · 0 errors |
 | `pnpm test` (root) | 247 passed / 27 files |
-| `pnpm --filter task-api test` (real PostgreSQL, scripted model, fake embeddings) | 93 passed / 9 files |
+| `pnpm --filter task-api test` (real PostgreSQL, scripted model, fake embeddings) | 110 passed / 10 files (after the review-fix pass; 93 before) |
 | `pnpm --filter task-web test` | 25 passed / 4 files |
 | `pnpm --filter task-web build` (Next 16.4.6, Node 26) | passes; 10 routes |
 | Offline AI eval suite (`apps/task-api/eval/suite.ts`, 12 cases) | real agent 12/12 · deliberately regressed agent 7/12 (`.superpowers` output kept locally) |
@@ -30,7 +30,18 @@
 ## Skipped / not verified (be honest with learners)
 - **Browser UI not driven or screenshotted** (Chrome DevTools MCP profile was locked). Pages are verified by build + unit tests + running the same client code (`ApiClient`, `streamChat`, `chatReducer`) against the live API.
 - **Part 17–18 examples were not all re-run in the final pass**: Groq's daily quota was exhausted (17-03…17-12 returned 429 in the re-run; 17-01/02/09 and 18-01/02 exit 0). They were run live earlier in Tasks 2–6 (see ledger); the offline-capable ones are covered by `pnpm test`.
-- Docker: both images built locally (task-api 905 MB, task-web 961 MB, not slimmed); the API container started and answered 401 on `/auth/me` against the dev DB. The web container was built but not run. First Dockerfile drafts were broken (no corepack in node:26; `prisma generate` needed the schema and no `.env`) — found only by building.
+- Docker: both images built locally (task-api 905 MB, task-web 961 MB, not slimmed); the API container started and answered 401 on `/auth/me` against the dev DB. The web container answers 200 on `/login` and `migrate deploy` runs inside the API image. First drafts were broken (no corepack in node:26; `prisma generate` needed the schema and no `.env`; the web CMD called `pnpm`, which the final stage lacks) — found only by building and running.
 - `workshops/part-19` has an unverified solution sketch (requirements + acceptance criteria are real).
 - Retrieval quality was checked live only on tiny documents; threshold 0.35 must be re-calibrated per corpus.
 - `--langsmith` mode for the task-api eval suite is not implemented (the Part 18 pipeline covers LangSmith); MemorySaver/InMemoryStore/rate limiter are in-memory (single instance, lost on restart); no real deployment; LangSmith features beyond the free plan untouched.
+
+## Whole-branch review (fresh reviewer, most capable model) and the fix pass
+The reviewer found **no cross-user leak** but 2 Critical + 6 Important issues, all verified by probes and fixed RED→GREEN in `apps/task-api/test/final-review.spec.ts` (17 new cases):
+- C1 approving delete #1 when the model then asked for delete #2 lost the 2nd request and stuck the thread → a new Approval is created and returned.
+- C2 client disconnect mid-tool / exceeding the tool-call cap left tool calls without results (provider 400 on every later message) → thread is repaired before each message; cap uses `exitBehavior:"continue"`.
+- I1 restart while an approval was pending locked the conversation → approval closes as expired (409), chat works.
+- I2 resume failing *after* the tool ran told the user "nothing was deleted" and wrote no audit → 503 "done, but AI reply failed", approval decided, audit for every action; stale decisions are audited.
+- I3 rate limit was per controller (≈60/min, not 20) and `/auth` unlimited → one shared budget per user; `/auth/*` limited per IP.
+- I4 `dueDate` accepted junk ("Dec 5", "5/12/2026", datetimes without offset) → strict.
+- I5 web container did not start (`pnpm` missing in final stage) → fixed and run.
+- I6 a README "real output" for MCP injection was not evidence → replaced by an honest statement.

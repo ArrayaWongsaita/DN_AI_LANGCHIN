@@ -18,5 +18,7 @@ COPY --from=build --chown=node:node /repo /repo
 USER node
 EXPOSE 3000
 WORKDIR /repo/apps/task-api
-# ก่อนเริ่ม: รัน `pnpm prisma migrate deploy` (job แยก) — ฐานข้อมูลต้องมี extension vector
+# ก่อนเริ่ม: รัน migration เป็น job แยกด้วย image นี้ (ไม่มี pnpm/.env ใน image — ส่ง TASK_API_DATABASE_URL ทาง env):
+#   docker run --rm -e TASK_API_DATABASE_URL=... task-api node node_modules/prisma/build/index.js migrate deploy
+# ฐานข้อมูลต้องมี extension vector (migration `knowledge` สร้างให้เอง)
 CMD ["node", "--import", "tsx", "src/main.ts"]

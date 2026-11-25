@@ -1,5 +1,5 @@
 import type { BaseChatModel } from "@langchain/core/language_models/chat_models";
-import { isAIMessage, type BaseMessage } from "@langchain/core/messages";
+import { isAIMessage, ToolMessage, type BaseMessage } from "@langchain/core/messages";
 import { Command, MemorySaver } from "@langchain/langgraph";
 import { Inject, Injectable } from "@nestjs/common";
 import type { StructuredToolInterface } from "@langchain/core/tools";
@@ -121,7 +121,7 @@ export class AgentService {
       ...(this.fallbackModel ? [modelFallbackMiddleware(this.fallbackModel) as unknown as AgentMiddleware] : []), // อยู่นอก retry: ลองโมเดลหลักครบก่อนค่อยสลับ
       modelRetryMiddleware({ maxRetries: this.retryOptions.maxRetries ?? 2, initialDelayMs: this.retryOptions.delayMs ?? 500, backoffFactor: 2, retryOn: (e: Error) => isTransientModelError(e), onFailure: "error" }) as unknown as AgentMiddleware,
       modelCallLimitMiddleware({ runLimit: limits.modelCalls, exitBehavior: "end" }) as unknown as AgentMiddleware,
-      toolCallLimitMiddleware({ runLimit: limits.toolCalls, exitBehavior: "end" }) as unknown as AgentMiddleware,
+      toolCallLimitMiddleware({ runLimit: limits.toolCalls, exitBehavior: "continue" }) as unknown as AgentMiddleware,
       summarizationMiddleware({ model: this.model, trigger: { messages: sum.trigger }, keep: { messages: sum.keep } }) as unknown as AgentMiddleware,
       ...createApprovalMiddleware({
         requireFor: APPROVAL_TOOLS,
@@ -241,6 +241,33 @@ export class AgentService {
       text: messageText(m),
       ...(isAIMessage(m) && m.tool_calls?.length ? { toolCalls: m.tool_calls.map((c) => ({ name: c.name, args: c.args as Record<string, unknown> })) } : {}),
     }));
+  }
+
+  /**
+   * สถานะ thread ที่ตรวจเจ้าของแล้ว: `interrupt` = หยุดรออนุมัติอยู่, `dangling` = tool call ที่ยังไม่มีผลลัพธ์ (เช่นลูกค้าตัดสาย/ชนเพดานกลางทาง),
+   * `empty` = ไม่มีข้อความเลย (checkpoint หาย เช่นรีสตาร์ท)
+   */
+  async threadStatus(userId: string, conversationId: string): Promise<{ interrupt: PendingAction[] | null; dangling: { id: string; name: string }[]; empty: boolean }> {
+    const graph = this.build() as unknown as { getState(c: unknown): Promise<{ values: { messages?: BaseMessage[] }; tasks?: { interrupts?: { value?: { actionRequests?: PendingAction[] } }[] }[] }> };
+    const state = await graph.getState({ configurable: { thread_id: ownedThreadId(userId, conversationId) } });
+    const messages = state.values.messages ?? [];
+    const answered = new Set(messages.filter((m) => m.getType() === "tool").map((m) => (m as BaseMessage & { tool_call_id: string }).tool_call_id));
+    const actions = state.tasks?.flatMap((t) => t.interrupts ?? []).find((i) => i.value?.actionRequests)?.value?.actionRequests;
+    return {
+      interrupt: actions ? actions.map((a) => ({ name: a.name, args: a.args, description: a.description })) : null,
+      dangling: messages.flatMap((m) => (isAIMessage(m) ? (m.tool_calls ?? []) : [])).filter((c) => c.id && !answered.has(c.id)).map((c) => ({ id: c.id!, name: c.name })),
+      empty: messages.length === 0,
+    };
+  }
+
+  /** ปิด tool call ที่ค้าง (ไม่มีผลลัพธ์) ด้วย ToolMessage ที่บอกว่าถูกยกเลิก เพื่อให้ส่งข้อความต่อได้ — provider จริงปฏิเสธลำดับที่ขาด */
+  async cancelDangling(userId: string, conversationId: string, dangling: { id: string; name: string }[]): Promise<void> {
+    if (dangling.length === 0) return;
+    const graph = this.build() as unknown as { updateState(c: unknown, v: unknown): Promise<unknown> };
+    await graph.updateState(
+      { configurable: { thread_id: ownedThreadId(userId, conversationId) } },
+      { messages: dangling.map((d) => new ToolMessage({ tool_call_id: d.id, name: d.name, status: "error", content: "การทำงานนี้ถูกยกเลิกก่อนเสร็จ (การเชื่อมต่อขาดหรือชนเพดาน) ไม่ได้ทำรายการ" })) },
+    );
   }
 
   async deleteThread(userId: string, conversationId: string): Promise<void> {

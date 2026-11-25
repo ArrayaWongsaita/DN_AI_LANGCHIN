@@ -172,7 +172,7 @@ headline: "สัปดาห์นี้มีงานทั้งหมด 3 
 - ชุดประเมินต้องพิสูจน์ว่า *ตกเป็น* เมื่อของพัง ไม่ใช่แค่ *ผ่าน* เมื่อของดี
 
 ### สิ่งที่ Part นี้ **ไม่ได้** ทำ / ยังไม่ได้พิสูจน์
-- ยังไม่ deploy ขึ้น host จริง Docker image ทั้งสอง **build ผ่านบนเครื่องนี้** (task-api 905 MB, task-web 961 MB — ใหญ่เพราะยังเป็น image ของ workspace ทั้งก้อน ไม่ได้ตัดแต่ง) และ container ของ api รันขึ้นแล้วตอบ 401 ที่ `/auth/me`; ยังไม่ได้รัน container ของเว็บ และไม่ได้ทดสอบ flow เต็มใน container
+- ยังไม่ deploy ขึ้น host จริง Docker image ทั้งสอง **build ผ่านบนเครื่องนี้** (task-api 905 MB, task-web 961 MB — ใหญ่เพราะยังเป็น image ของ workspace ทั้งก้อน ไม่ได้ตัดแต่ง) และ container ของ api รันขึ้นแล้วตอบ 401 ที่ `/auth/me`; container ของเว็บรันขึ้นและตอบ 200 ที่ `/login`; migration รันใน image ได้ (`migrate deploy` → "No pending migrations"); ไม่ได้ทดสอบ flow เต็มใน container
 - หน้าเว็บตรวจด้วย unit test + `next build` + การรัน flow ผ่าน client code เดียวกับเว็บเทียบกับ API จริง — **ไม่ได้เปิดเบราว์เซอร์ดู/screenshot** (เครื่องมือเบราว์เซอร์เปิดไม่ได้ขณะทำ)
 - คุณภาพ retrieval ตรวจกับ Gemini จริงด้วยเอกสารเล็กๆ ไม่กี่ชิ้น; spec ใช้ embeddings ปลอม
 - ฟีเจอร์ LangSmith เกิน free plan, multi-instance/Redis, Postgres checkpointer — ไม่ได้ทำ
