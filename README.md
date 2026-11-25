@@ -37,7 +37,7 @@ pnpm play 04-01    # เหมือนกัน
 |---|---|---|---|
 | 1 | 01 | Introduction to LangChain | ✅ |
 | 1 | 02 | Project Setup & First Chat Model | ✅ |
-| 1 | 03 | Chat Models & Model Configuration | รอทำ |
+| 1 | 03 | Chat Models & Model Configuration | ✅ |
 | 1 | 04 | Messages & Conversation | รอทำ |
 | 2 | 05 | Prompt Engineering & Prompt Templates | รอทำ |
 | 2 | 06 | Structured Output & Zod Schema | รอทำ |

@@ -11,6 +11,8 @@ export interface ChatModelOptions {
   maxTokens?: number;
   timeout?: number;
   maxRetries?: number;
+  /** เฉพาะ reasoning model ของ Groq (gpt-oss): ยิ่งต่ำยิ่งคิดน้อย เร็วและประหยัด token — ค่าเริ่มต้น "low" */
+  reasoningEffort?: "low" | "medium" | "high";
 }
 
 const DEFAULTS: Record<ProviderName, { model: string; keyName: string }> = {
@@ -26,10 +28,14 @@ export async function createChatModel(opts: ChatModelOptions = {}): Promise<Base
   const provider = opts.provider ?? "groq";
   const { model: defaultModel, keyName } = DEFAULTS[provider];
   const apiKey = requireEnv(keyName);
-  const { provider: _p, model, ...rest } = opts;
-  return (await initChatModel(model ?? defaultModel, {
+  const { provider: _p, model, reasoningEffort, ...rest } = opts;
+  const modelName = model ?? defaultModel;
+  // gpt-oss เป็น reasoning model: ถ้า effort สูง token อาจหมดไปกับการคิดจนคำตอบว่าง (finish_reason = length)
+  const effort = provider === "groq" && modelName.startsWith("openai/gpt-oss") ? (reasoningEffort ?? "low") : undefined;
+  return (await initChatModel(modelName, {
     modelProvider: provider,
     apiKey,
+    ...(effort ? { reasoningEffort: effort } : {}),
     ...rest,
   })) as unknown as BaseChatModel;
 }
