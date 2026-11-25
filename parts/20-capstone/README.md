@@ -107,7 +107,7 @@ headline: "สัปดาห์นี้มีงานทั้งหมด 3 
 | `apps/task-api/src/ai/approval.middleware.ts` | HITL + ExecutionGuard (ตรวจสิทธิ์ซ้ำตอนทำ) |
 | `apps/task-api/src/conversations/approvals.service.ts` | claim แบบ `updateMany where status=pending`, idempotent, stale → 409 |
 | `apps/task-api/src/knowledge/knowledge.service.ts` | chunk → embed → transaction, ค้นด้วย `<=>` + userId join |
-| `apps/task-api/eval/suite.ts` | 12 กรณีประเมิน + agent ที่ถดถอยจงใจ |
+| `apps/task-api/eval/suite.ts` | 13 กรณีประเมิน + agent ที่ถดถอยจงใจ |
 | `apps/task-web/lib/sse.ts`, `chat-reducer.ts` | parser + state machine ของแชท |
 
 ## 8. Best Practices
@@ -132,10 +132,10 @@ headline: "สัปดาห์นี้มีงานทั้งหมด 3 
 
 ## 10. Real-world Use Cases — ชุดประเมิน (milestone 12)
 
-`apps/task-api/eval/suite.ts`: **12 กรณี ใน 7 หมวด** (tool-selection, create-update, retrieval, grounding, authorization, approval, no-tool) รันกับ agent จริงของแอป (middleware + DB จริง) ด้วย model สคริปต์ — ผลซ้ำได้ ไม่เสีย token
+`apps/task-api/eval/suite.ts`: **13 กรณี ใน 7 หมวด** (tool-selection, create-update, retrieval, grounding, authorization, approval, no-tool) รันกับ agent จริงของแอป (middleware + DB จริง) ด้วย model สคริปต์ — ผลซ้ำได้ ไม่เสีย token
 สิ่งที่วัดไม่ใช่ "model ฉลาดไหม" แต่ *ระบบรอบ model ทำตามสัญญาไหม*: เรียก tool ถูกตัว/args ถูก, **ผลข้างเคียงในฐานข้อมูลเกิดจริงกี่ครั้ง** (snapshot ก่อน/หลัง), ข้อมูลของคนอื่นไม่ถูกแตะ, เอกสารที่ค้นเจอตรง, คำตอบอ้างแหล่งที่มาที่ค้นเจอจริง
-**ตัวพิสูจน์ว่าชุดนี้ใช้ได้:** `regressedRunner` คือ agent ที่ถดถอยจงใจ (ไม่มี approval, tool เชื่อ `userId` ที่ model ส่ง) — spec ยืนยันว่ามัน **ตกกรณี** `approval-delete-own`, `authz-delete-foreign`, `authz-model-userid` ชุดประเมินที่ไม่เคยเห็นตัวอย่างที่ควรตก พิสูจน์อะไรไม่ได้
-ผลที่รันจริง: agent จริง **12/12**; agent ที่ถดถอย **7/12** — ตก 5 กรณี: 3 กรณีที่ตั้งใจ (ลบโดยไม่ขออนุมัติ, ลบงานคนอื่น, เชื่อ `userId` จาก model) และอีก 2 กรณี (`complete-own`, `priority-own`) เพราะ agent ถดถอยตัวนี้ไม่มี tool เหล่านั้นเลย (ไม่ใช่การพิสูจน์ guard — อย่านับเป็นหลักฐาน) ขีดจำกัด: model สคริปต์ตอบตามบท จึงไม่ได้วัด "model เลือก tool ถูกไหม" — อันนั้นใช้ชุดของ Part 18 (`pnpm play 18-13`) กับ model จริง
+**ตัวพิสูจน์ว่าชุดนี้ใช้ได้:** `regressedRunner` คือ agent ที่ถดถอยจงใจ (ไม่มี approval, tool เชื่อ `userId` ที่ model ส่ง) — spec ยืนยันว่ามัน **ตกกรณี** `approval-delete-own`, `authz-delete-foreign`, `authz-delete-foreign-approved`, `authz-model-userid` ชุดประเมินที่ไม่เคยเห็นตัวอย่างที่ควรตก พิสูจน์อะไรไม่ได้
+ผลที่รันจริง: agent จริง **13/13**; agent ที่ถดถอย **7/13** — ตก 6 กรณี: 4 กรณีที่ตั้งใจ (ลบโดยไม่ขออนุมัติ, ลบงานคนอื่น, ลบงานคนอื่นแม้ผ่านการอนุมัติแล้ว, เชื่อ `userId` จาก model) และอีก 2 กรณี (`complete-own`, `priority-own`) เพราะ agent ถดถอยตัวนี้ไม่มี tool เหล่านั้นเลย (ไม่ใช่การพิสูจน์ guard — อย่านับเป็นหลักฐาน) ขีดจำกัด: model สคริปต์ตอบตามบท จึงไม่ได้วัด "model เลือก tool ถูกไหม" — อันนั้นใช้ชุดของ Part 18 (`pnpm play 18-13`) กับ model จริง
 
 **Observability:** ตาราง `UsageLog` บันทึก `{userId, route, status, ms, inputTokens, outputTokens}` ต่อ request (ผลจริง: ประมาณ 2.3–3.7k token input ต่อเทิร์นของเธรดใหม่ — tool 13 ตัวกับ system prompt กินเป็นก้อนใหญ่) LangSmith เปิดได้ด้วย `LANGSMITH_TRACING=true` (ปิดเป็นค่าเริ่มต้น; `pnpm test` ไม่ส่ง trace)
 

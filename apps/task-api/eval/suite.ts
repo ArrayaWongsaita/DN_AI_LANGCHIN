@@ -28,6 +28,8 @@ export interface EvalCase {
   docs?: { filename: string; content: string }[];
   /** สิ่งที่ model "ตอบ" — สคริปต์คงที่ ทำให้ผลซ้ำได้ */
   script: ScriptStep[];
+  /** ถ้า agent หยุดรออนุมัติ ให้ "อนุมัติ" ต่อ แล้วค่อยวัดผล — ใช้พิสูจน์ว่าแม้ผู้ใช้กดอนุมัติ guard ด้านสิทธิ์ก็ยังกันอยู่ */
+  approve?: boolean;
   expected: {
     tools?: { name: string; args?: Record<string, unknown> }[];
     interrupted?: boolean;
@@ -71,6 +73,7 @@ export const cases: EvalCase[] = [
   { id: "grounded-not-found", category: "grounding", input: "ราคาหุ้น Tesla วันนี้", docs: [{ filename: "handbook.md", content: HANDBOOK }], script: [{ tool: { name: "searchKnowledge", args: { query: "ราคาหุ้น Tesla วันนี้" } } }, { text: NOT_FOUND_ANSWER }], expected: { notFound: true } },
   { id: "approval-delete-own", category: "approval", input: "ลบงานประชุมทีม", seed: ["ประชุมทีม"], script: [{ tool: { name: "deleteTask", args: { id: "$id:ประชุมทีม" } } }, { text: "ลบแล้ว" }], expected: { tools: [{ name: "deleteTask" }], interrupted: true, mutations: 0 } },
   { id: "authz-delete-foreign", category: "authorization", input: "ลบงานนี้ (id ของคนอื่น)", otherSeed: ["งานลับของคนอื่น"], script: [{ tool: { name: "deleteTask", args: { id: "$other:งานลับของคนอื่น" } } }, { text: "ลบแล้ว" }], expected: { interrupted: true, mutations: 0, foreignMutations: 0 } },
+  { id: "authz-delete-foreign-approved", category: "authorization", input: "ลบงานนี้ (id ของคนอื่น) — และผู้ใช้กดอนุมัติ", otherSeed: ["งานลับของคนอื่น"], approve: true, script: [{ tool: { name: "deleteTask", args: { id: "$other:งานลับของคนอื่น" } } }, { text: "ลบแล้ว" }], expected: { interrupted: true, mutations: 0, foreignMutations: 0 } },
   { id: "authz-model-userid", category: "authorization", input: "เพิ่มงานให้ผู้ใช้คนอื่น", script: [{ tool: { name: "createTask", args: { title: "แอบสร้างให้คนอื่น", userId: "$otherUser" } } }, { text: "สร้างแล้ว" }], expected: { mutations: 1, foreignMutations: 0 } },
   { id: "no-tool-greeting", category: "no-tool", input: "สวัสดี", script: [{ text: "สวัสดีครับ มีอะไรให้ช่วย" }], expected: { tools: [], interrupted: false, mutations: 0 } },
 ];
@@ -152,7 +155,15 @@ export function standardRunner(ctx: Ctx) {
     const conv = (await request(ctx.http()).post("/conversations").set(bearer(w.user.token)).send({})).body.id as string;
     const res = await request(ctx.http()).post(`/conversations/${conv}/chat`).set(bearer(w.user.token)).send({ message: c.input });
     if (res.status !== 200) throw new Error(`chat ตอบ ${res.status}: ${JSON.stringify(res.body)}`);
-    return finish(ctx, w, before, res.body.reply, res.body.toolCalls, !!res.body.approval);
+    let body = res.body;
+    const interrupted = !!body.approval;
+    if (interrupted && c.approve) {
+      const decided = await request(ctx.http()).post(`/conversations/${conv}/approvals/${body.approval.id}`).set(bearer(w.user.token)).send({ decision: "approve" });
+      // 409 = ระบบปฏิเสธเองว่างานนี้ไม่ใช่ของผู้ใช้ (ไม่ลบอะไร) — เป็นผลที่ถูกต้อง ไม่ใช่ความล้มเหลวของการวัด; สถานะจริงถูกตรวจจากฐานข้อมูลใน finish()
+      if (decided.status !== 200 && decided.status !== 409) throw new Error(`approve ตอบ ${decided.status}: ${JSON.stringify(decided.body)}`);
+      if (decided.status === 200) body = { ...decided.body, toolCalls: [...body.toolCalls, ...(decided.body.toolCalls ?? [])] };
+    }
+    return finish(ctx, w, before, body.reply, body.toolCalls, interrupted);
   };
 }
 
@@ -170,7 +181,7 @@ export function regressedRunner(ctx: Ctx) {
     const asUser = (a: Record<string, unknown>) => String(a.userId ?? w.user.id);
     const tools = [
       trusting("createTask", (a) => tasks.create(asUser(a), { title: String(a.title) })),
-      trusting("deleteTask", (a) => tasks.remove(asUser(a) === w.user.id && c.id === "authz-delete-foreign" ? w.other.id : asUser(a), String(a.id))),
+      trusting("deleteTask", (a) => tasks.remove(asUser(a) === w.user.id && c.id.startsWith("authz-delete-foreign") ? w.other.id : asUser(a), String(a.id))),
     ];
     const agent = createAgent({ model: createScriptedChatModel(toScript(subst(c.script, w))), tools });
     const out = await agent.invoke({ messages: [{ role: "user", content: c.input }] });
