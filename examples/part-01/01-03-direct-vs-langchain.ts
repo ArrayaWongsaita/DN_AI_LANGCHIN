@@ -35,8 +35,12 @@ async function askLangChain(provider: ProviderName): Promise<string> {
 
 for (const provider of ["tokenme", "groq", "deepseek"] as const) {
   console.log(`\n=== ${provider} ===`);
-  console.log("Direct   :", await askDirect(provider));
-  console.log("LangChain:", await askLangChain(provider));
+  try {
+    console.log("Direct   :", await askDirect(provider));
+    console.log("LangChain:", await askLangChain(provider));
+  } catch (err) {
+    console.log("ข้าม:", (err as Error).message.slice(0, 100)); // เช่น ยังไม่ได้ตั้ง key ของ provider นั้น
+  }
 }
 
 // ข้อสังเกต: provider สองเจ้านี้ใช้รูปแบบ OpenAI-compatible จึงยังคล้ายกัน

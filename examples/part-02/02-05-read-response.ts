@@ -21,4 +21,5 @@ console.log("usage_metadata:", response.usage_metadata);
 
 // response_metadata: ข้อมูลเพิ่มจาก provider เช่น เหตุผลที่หยุด (finish_reason)
 console.log("finish_reason:", response.response_metadata?.finish_reason);
-console.log("model:", response.response_metadata?.model);
+// ชื่อ model อยู่ใน response_metadata แต่ชื่อ field ต่างกันตาม provider (model หรือ model_name)
+console.log("model:", response.response_metadata?.model_name ?? response.response_metadata?.model);
