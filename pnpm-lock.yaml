@@ -44,6 +44,9 @@ importers:
       langchain:
         specifier: 1.6.8
         version: 1.6.8(@langchain/core@1.5.1(openai@7.63.0(ws@8.23.0)(zod@4.6.7))(ws@8.23.0))(openai@7.63.0(ws@8.23.0)(zod@4.6.7))(ws@8.23.0)
+      langsmith:
+        specifier: 0.14.0
+        version: 0.14.0(openai@7.63.0(ws@8.23.0)(zod@4.6.7))(ws@8.23.0)
       pdf-parse:
         specifier: 2.4.5
         version: 2.4.5

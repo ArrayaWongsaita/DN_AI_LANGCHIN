@@ -60,6 +60,11 @@ pnpm db:down             # หยุด (ข้อมูลอยู่ใน vo
 
 พอร์ตเริ่มต้นคือ **5435** (เลี่ยงชนกับ Postgres ตัวอื่นในเครื่อง) เปลี่ยนได้ด้วย `POSTGRES_PORT` และแก้ `DATABASE_URL` ให้ตรงกัน
 
+## ตั้งค่าเพิ่มสำหรับ Phase 3 (Part 17–20)
+
+- `LANGSMITH_API_KEY` (free plan พอ) ใช้ใน Part 18 — tracing ปิดเป็นค่าเริ่มต้น (`LANGSMITH_TRACING=false`) และเปิดเฉพาะตัวอย่างที่ต้องการ เพราะ free plan มี quota จำกัด
+- `pnpm test` ไม่ส่ง trace เลย
+
 ## คำสั่งสำหรับ repo
 
 ```bash
