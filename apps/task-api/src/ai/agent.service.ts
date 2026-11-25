@@ -8,6 +8,7 @@ import { MCP_TOOLS, type McpToolsFactory } from "../mcp/mcp-tools.js";
 import { retryAsync } from "../shared/retry.js";
 import { messageText } from "../shared/text.js";
 import { TasksService } from "../tasks/tasks.service.js";
+import { createToolErrorMiddleware } from "./tool-errors.middleware.js";
 import { createApprovalMiddleware, type ApprovalDecision } from "./approval.middleware.js";
 import { CHAT_MODEL } from "./model.provider.js";
 import { UNTRUSTED_RULE, createUntrustedResultMiddleware } from "./untrusted.middleware.js";
@@ -101,6 +102,7 @@ export class AgentService {
       contextSchema: runtimeContextSchema,
       checkpointer: this.checkpointer,
       middleware: [
+        createToolErrorMiddleware(),
         ...(extraTools.length ? [createUntrustedResultMiddleware((n) => extraTools.some((t) => t.name === n))] : []),
         ...createApprovalMiddleware({
         requireFor: APPROVAL_TOOLS,
@@ -116,7 +118,7 @@ export class AgentService {
   }
 
   private config(ctx: RuntimeContext, conversationId: string, signal?: AbortSignal) {
-    return { configurable: { thread_id: ownedThreadId(ctx.userId, conversationId) }, context: ctx, recursionLimit: 25, signal };
+    return { configurable: { thread_id: ownedThreadId(ctx.userId, conversationId) }, context: ctx, recursionLimit: 60, signal };
   }
 
   private toResult(result: { messages: BaseMessage[]; __interrupt__?: { value?: { actionRequests?: PendingAction[] } }[] }): AgentRunResult {

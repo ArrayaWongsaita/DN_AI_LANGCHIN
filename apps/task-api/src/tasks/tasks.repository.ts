@@ -19,17 +19,18 @@ export class TasksRepository {
   }
 
   findOwned(userId: string, id: string) {
-    return this.prisma.task.findFirst({ where: { id, userId } });
+    // id รูปแบบผิด (ไม่ใช่ uuid) ถือว่าไม่พบ ไม่ใช่ error ของฐานข้อมูล
+    return this.prisma.task.findFirst({ where: { id, userId } }).catch(() => null);
   }
 
   /** update/delete แบบมีเจ้าของใน where — คืน null ถ้าไม่ใช่ของ user (ไม่ throw P2025) */
   async updateOwned(userId: string, id: string, data: Prisma.TaskUpdateInput) {
-    const { count } = await this.prisma.task.updateMany({ where: { id, userId }, data });
+    const { count } = await this.prisma.task.updateMany({ where: { id, userId }, data }).catch(() => ({ count: 0 }));
     return count === 0 ? null : this.findOwned(userId, id);
   }
 
   async deleteOwned(userId: string, id: string): Promise<boolean> {
-    const { count } = await this.prisma.task.deleteMany({ where: { id, userId } });
+    const { count } = await this.prisma.task.deleteMany({ where: { id, userId } }).catch(() => ({ count: 0 }));
     return count > 0;
   }
 }
