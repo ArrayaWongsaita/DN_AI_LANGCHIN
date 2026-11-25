@@ -59,6 +59,27 @@ describe.skipIf(!hasDb)("19-10 SSE streaming", () => {
     expect(events.at(-1)!.data).toMatchObject({ reply: "เพิ่มงานแล้ว" });
   });
 
+  test("a stream writes exactly one usage row (with the token counts), not an extra empty one from the interceptor", async () => {
+    await ctx.prisma.usageLog.deleteMany({ where: { userId: a.id } });
+    const usage = { input_tokens: 40, output_tokens: 7, total_tokens: 47 };
+    ctx.useScript(new AIMessage({ content: "ตอบสั้น", usage_metadata: usage }));
+    const res = await request(ctx.http())
+      .post(`/conversations/${conv}/chat/stream`)
+      .set(bearer(a.token))
+      .send({ message: "ทักทาย" })
+      .buffer(true)
+      .parse((r, cb) => {
+        let d = "";
+        r.setEncoding("utf8");
+        r.on("data", (c: string) => (d += c));
+        r.on("end", () => cb(null, d));
+      });
+    expect(res.status).toBe(200);
+    const rows = await ctx.prisma.usageLog.findMany({ where: { userId: a.id } });
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ inputTokens: 40, outputTokens: 7, status: 200 });
+  });
+
   test("a stream for someone else's conversation → 404 before any event; no token → 401", async () => {
     const b = await registerUser(ctx.http(), "sse-b");
     const other = await request(ctx.http()).post(`/conversations/${conv}/chat/stream`).set(bearer(b.token)).send({ message: "hi" });

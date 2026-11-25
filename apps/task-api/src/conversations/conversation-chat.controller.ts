@@ -8,10 +8,11 @@ import { CurrentUser } from "../auth/current-user.decorator.js";
 import { JwtGuard } from "../auth/jwt.guard.js";
 import { classifyError } from "../common/public-error.js";
 import { RateLimitGuard } from "../common/rate-limit.guard.js";
-import { UsageInterceptor } from "../usage/usage.interceptor.js";
+import { SelfRecordedUsage, UsageInterceptor } from "../usage/usage.interceptor.js";
 import { UsageService } from "../usage/usage.service.js";
 import { parseBody } from "../common/zod.js";
 import { ApprovalsService, DecisionBody } from "./approvals.service.js";
+import { ConversationLock } from "./conversation-lock.js";
 import { ConversationsService } from "./conversations.service.js";
 
 const ChatBody = z.object({ message: z.string().trim().min(1, "ข้อความต้องไม่ว่าง").max(4000, "ข้อความยาวเกิน 4000 ตัวอักษร") });
@@ -27,6 +28,7 @@ export class ConversationChatController {
     @Inject(AgentService) private readonly agent: AgentService,
     @Inject(ApprovalsService) private readonly approvals: ApprovalsService,
     @Inject(UsageService) private readonly usage: UsageService,
+    @Inject(ConversationLock) private readonly lock: ConversationLock,
   ) {}
 
   /** ตอบแบบรอจบ: ถ้า agent หยุดรออนุมัติ จะได้ `approval: { id, actions }` (ยังไม่มีอะไรถูกลบ) */
@@ -35,10 +37,15 @@ export class ConversationChatController {
   async chat(@CurrentUser() user: PublicUser, @Param("id") id: string, @Body() body: unknown) {
     const { message } = parseBody(ChatBody, body);
     await this.conversations.getOwned(user.id, id);
-    await this.approvals.ensureChatable(user, id);
-    const result = await this.agent.run({ ctx: buildRuntimeContext(user), conversationId: id, message });
-    await this.conversations.touch(id);
-    return this.withApproval(user.id, id, result);
+    const release = this.lock.acquire(id);
+    try {
+      await this.approvals.ensureChatable(user, id);
+      const result = await this.agent.run({ ctx: buildRuntimeContext(user), conversationId: id, message });
+      await this.conversations.touch(id);
+      return await this.withApproval(user.id, id, result);
+    } finally {
+      release();
+    }
   }
 
   private async withApproval(userId: string, conversationId: string, r: AgentRunResult) {
@@ -49,11 +56,19 @@ export class ConversationChatController {
 
   /** SSE: token | tool_start | tool_end | approval_required | done | error — ปิดการเชื่อมต่อ = ยกเลิกงานของ agent */
   @Post("chat/stream")
+  @SelfRecordedUsage()
   async stream(@CurrentUser() user: PublicUser, @Param("id") id: string, @Body() body: unknown, @Res() res: Response) {
     const { message } = parseBody(ChatBody, body);
     await this.conversations.getOwned(user.id, id); // ตรวจก่อนเริ่มสตรีม: ผิดสิทธิ์ได้ 404 ปกติ
-    await this.approvals.ensureChatable(user, id);
-    const abort = new AbortController();
+    const release = this.lock.acquire(id);
+    let abort: AbortController;
+    try {
+      await this.approvals.ensureChatable(user, id);
+      abort = new AbortController();
+    } catch (e) {
+      release();
+      throw e;
+    }
     const started = Date.now();
     let usage = { inputTokens: 0, outputTokens: 0 };
     let status = 200;
@@ -84,6 +99,7 @@ export class ConversationChatController {
         sse(res, "error", { statusCode: pub.status, message: pub.message }); // ไม่ส่ง err.message ดิบ (อาจมี key/path)
       }
     } finally {
+      release();
       await this.usage.record({ userId: user.id, route: "POST /conversations/:id/chat/stream", status, ms: Date.now() - started, ...usage });
       res.end();
     }
@@ -101,7 +117,8 @@ export class ConversationChatController {
   async decide(@CurrentUser() user: PublicUser, @Param("id") id: string, @Param("approvalId") approvalId: string, @Body() body: unknown) {
     const decision = parseBody(DecisionBody, body);
     await this.conversations.getOwned(user.id, id);
-    const result = await this.approvals.decide(user, id, approvalId, decision);
+    const release = this.lock.acquire(id);
+    const result = await this.approvals.decide(user, id, approvalId, decision).finally(release);
     return { reply: result.reply, toolCalls: result.toolCalls, usage: result.usage, ...(result.approval ? { approval: result.approval } : {}) };
   }
 }
