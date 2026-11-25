@@ -7,7 +7,9 @@ import { ToolIndicator } from "./ToolIndicator";
 /** แสดงข้อความเป็น text ล้วน (React escape ให้) — ไม่ render markdown/HTML จาก model เพื่อกัน XSS */
 export function MessageList({ messages, tool, streaming }: { messages: ChatMessage[]; tool: { name: string } | null; streaming: boolean }) {
   const end = useRef<HTMLDivElement>(null);
-  useEffect(() => end.current?.scrollIntoView?.({ block: "end" }), [messages, tool]);
+  useEffect(() => {
+    end.current?.scrollIntoView?.({ block: "end" }); // ห้าม return ค่า: React ถือว่าเป็น cleanup แล้วหน้าพัง
+  }, [messages, tool]);
   return (
     <div className="flex-1 space-y-3 overflow-y-auto p-4" aria-live="polite">
       {messages.length === 0 && <p className="text-center text-sm text-slate-400">ลองพิมพ์ เช่น “เพิ่มงาน อ่านหนังสือ พรุ่งนี้” หรือ “วันนี้มีงานอะไรบ้าง”</p>}
