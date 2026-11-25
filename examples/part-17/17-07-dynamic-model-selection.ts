@@ -5,7 +5,7 @@ import { createTaskTools } from "../../src/data/tasks.js";
 import { createChatModel } from "../../src/models/index.js";
 import { ask, contextSchema, newStore, somchai } from "./_shared.js";
 
-const fast = await createChatModel({ provider: "groq", maxTokens: 1500 });
+const fast = await createChatModel({ provider: "tokenme", maxTokens: 1500 });
 const strong = await createChatModel({ provider: "deepseek", thinking: false, maxTokens: 1500 });
 
 const router = createMiddleware({
@@ -13,7 +13,7 @@ const router = createMiddleware({
   wrapModelCall: (request, handler) => {
     const total = request.messages.reduce((n, m) => n + String(typeof m.content === "string" ? m.content : "").length, 0);
     const useStrong = total > 120;
-    console.log(`  [ModelRouter] ข้อความรวม ${total} ตัวอักษร → ${useStrong ? "deepseek (ตัวแรง)" : "groq (ตัวเร็ว)"}`);
+    console.log(`  [ModelRouter] ข้อความรวม ${total} ตัวอักษร → ${useStrong ? "deepseek (ตัวแรง)" : "tokenme (ตัวเร็ว)"}`);
     return handler({ ...request, model: useStrong ? strong : fast });
   },
 });

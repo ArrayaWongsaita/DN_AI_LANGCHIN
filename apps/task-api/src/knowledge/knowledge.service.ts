@@ -1,13 +1,21 @@
 import { randomUUID } from "node:crypto";
 import type { Embeddings } from "@langchain/core/embeddings";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
-import { BadRequestException, Inject, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Inject, Injectable, NotFoundException, ServiceUnavailableException } from "@nestjs/common";
 import { z } from "zod";
 import { Prisma } from "../generated/prisma/client.js";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { createEmbeddings } from "../shared/embeddings.js";
 
 export const EMBEDDINGS = Symbol("EMBEDDINGS");
+
+const EMBEDDING_UNAVAILABLE = "บริการ embedding ใช้ไม่ได้ชั่วคราว (อาจเกินโควตา) ลองใหม่ภายหลัง";
+
+/** provider บางตัวคืนเวกเตอร์ว่างแทนที่จะ error (เช่นโควตา free tier เต็ม) — ต้องกันก่อนถึงฐานข้อมูล */
+function assertUsable(vector: number[] | undefined): number[] {
+  if (!Array.isArray(vector) || vector.length === 0) throw new ServiceUnavailableException(EMBEDDING_UNAVAILABLE);
+  return vector;
+}
 export const NOT_FOUND_ANSWER = "ไม่พบข้อมูลที่เกี่ยวข้องในเอกสาร";
 
 /** ขนาด chunk 500 ตัวอักษร ซ้อนกัน 50 และทิ้ง chunk ที่สั้นกว่า 20 (หัวข้อเดี่ยวๆ ไม่มีสาระ) */
@@ -58,7 +66,7 @@ export class KnowledgeService {
     if (chunks.length === 0) throw new BadRequestException("เนื้อหาสั้นเกินไปที่จะสร้างความรู้ได้");
     if (chunks.length > MAX_CHUNKS_PER_DOCUMENT) throw new BadRequestException(`เอกสารยาวเกินไป (เกิน ${MAX_CHUNKS_PER_DOCUMENT} ส่วน)`);
 
-    const vectors = await this.embeddings.embedDocuments(chunks); // embed ก่อนเขียน DB: ถ้าล้มจะไม่มีเอกสารค้างครึ่งๆ กลางๆ
+    const vectors = (await this.embeddings.embedDocuments(chunks)).map(assertUsable); // embed ก่อนเขียน DB: ถ้าล้มจะไม่มีเอกสารค้างครึ่งๆ กลางๆ
     const documentId = randomUUID();
     await this.prisma.$transaction([
       this.prisma.knowledgeDocument.create({ data: { id: documentId, userId, title, source: filename } }),
@@ -81,7 +89,7 @@ export class KnowledgeService {
 
   /** ค้นเฉพาะเอกสารของผู้ใช้ (join กับ userId) ผลที่ไกลกว่า MAX_DISTANCE ถูกตัดทิ้ง — ไม่เหลือ = NOT_FOUND โดยไม่เรียก LLM */
   async search(userId: string, query: string, k = 4): Promise<KnowledgeSearchResult> {
-    const vec = vectorLiteral(await this.embeddings.embedQuery(query));
+    const vec = vectorLiteral(assertUsable(await this.embeddings.embedQuery(query)));
     const rows = await this.prisma.$queryRaw<{ content: string; title: string; source: string; idx: number; distance: number }[]>(Prisma.sql`
       select c."content", d."title", d."source", c."idx", (c."embedding" <=> ${vec}::vector)::float8 as distance
       from "DocumentChunk" c join "KnowledgeDocument" d on d."id" = c."documentId"

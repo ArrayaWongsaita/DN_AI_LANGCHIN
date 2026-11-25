@@ -84,7 +84,7 @@ if (isMain(import.meta.url)) {
       }
       const message = positionals.join(" ").trim();
       if (!message) return;
-      const provider = values.provider === "deepseek" ? "deepseek" : "groq";
+      const provider = values.provider === "deepseek" || values.provider === "groq" ? values.provider : "tokenme";
       const model = await createChatModel({ provider, maxTokens: 2000, ...(provider === "deepseek" ? { thinking: false } : {}) });
       console.log(await chat({ model, checkpointer, store, userId, conversationId: values.conversation ?? "default", threadId: values.thread, message }));
     });

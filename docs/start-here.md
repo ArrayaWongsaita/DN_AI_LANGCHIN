@@ -7,7 +7,8 @@
 | ต้องมี | ใช้ตั้งแต่ | วิธี |
 |---|---|---|
 | Node.js 20+ และ pnpm | Part 02 | `pnpm install` |
-| `GROQ_API_KEY` (ฟรี) | Part 02 | `cp .env.example .env` แล้วใส่ key |
+| `TOKENME_API_KEY` | Part 03 | `cp .env.example .env` แล้วใส่ key (provider หลัก) |
+| `GROQ_API_KEY` (ฟรี) | Part 02 | ใช้ใน Part 02 ที่เรียก Groq ตรงๆ และเป็นตัวสำรอง |
 | `DEEPSEEK_API_KEY` (ไม่บังคับ) | Part 03 | สำหรับสลับ provider |
 | Docker | Part 12 | `pnpm db:up` (PostgreSQL + pgvector พอร์ต 5435) |
 | `GOOGLE_API_KEY` (ฟรี) | Part 14 | Gemini embeddings |
@@ -45,6 +46,6 @@
 ## 5. ติดปัญหา
 
 - `pnpm play` บอกว่าไม่เจอ key → ตรวจ `.env` (ชื่อตัวแปรต้องตรงกับ `.env.example`)
-- Groq โดน 429 → โควตารายวันหมด เปลี่ยนเป็น `AI_PROVIDER=deepseek` หรือรอวันถัดไป
+- Groq โดน 429 → โควตารายวันหมด ใช้ TokenMe (ค่าเริ่มต้น) หรือ `AI_PROVIDER=deepseek`
 - ต่อ Postgres ไม่ได้ → `pnpm db:up` แล้วเช็กว่าพอร์ต 5435 ว่าง
 - สูตรลัด: [`docs/cheatsheet.md`](cheatsheet.md) · เป้าหมายแต่ละ Part: [`docs/course-outline.md`](course-outline.md)

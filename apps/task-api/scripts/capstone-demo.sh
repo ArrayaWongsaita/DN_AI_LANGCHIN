@@ -20,7 +20,7 @@ say 'แสดงงานที่ยังไม่เสร็จ'
 say 'ค้นหางานที่เกี่ยวกับ Backend'
 say 'ทำเครื่องหมายว่างานเขียน Backend API เสร็จแล้ว'
 say 'ปรับงานอ่านหนังสือ TypeScript เป็นความสำคัญสูง'
-echo; echo "▶ GET /summaries/weekly (structured output)"; curl -s "$BASE/summaries/weekly" -H "$A" | js '"headline: "+o.summary.headline+"\n   risks="+JSON.stringify(o.summary.risks)+"\n   next="+JSON.stringify(o.summary.nextActions)'
+echo; echo "▶ GET /summaries/weekly (structured output)"; curl -s "$BASE/summaries/weekly" -H "$A" | js '.summary.headline+"\n   risks="+JSON.stringify(o.summary.risks)+"\n   next="+JSON.stringify(o.summary.nextActions)'
 echo; echo "▶ ลบงานประชุมทีม (ต้องรออนุมัติ)"
 AID=$(curl -s -X POST "$BASE/conversations/$CONV/chat" -H "$A" -H "$J" -d '{"message":"ลบงานประชุมทีม"}' | js '.approval?o.approval.id:""')
 if [ -n "$AID" ]; then echo; echo "▶ approve"; curl -s -X POST "$BASE/conversations/$CONV/approvals/$AID" -H "$A" -H "$J" -d '{"decision":"approve"}' | js .reply; fi
