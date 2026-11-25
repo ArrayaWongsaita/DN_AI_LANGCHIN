@@ -59,20 +59,22 @@ Unstructured = ข้อความอิสระ · Semi-structured = มี�
 **06-01** ขอข้อมูลสินค้าแล้วได้ markdown ทั้งก้อน เราต้องใช้ regex ดึงราคา (พังเมื่อ format เปลี่ยน):
 ```
 คำตอบ:
-**ข้อมูลสินค้า:**
-- **ชื่อสินค้า:** เสื้อสีดำ
-- **ราคา:** 350 บาท
-- **ไซซ์:** M, L
+เสื้อสีดำ ราคา 350 บาท มีไซซ์ M และ L
 
 ดึงราคาด้วย regex: 350
+→ ถ้า model เปลี่ยนรูปแบบคำตอบ (เช่น เขียน 'ราคา: ฿350') regex นี้พังทันที
 ```
 **06-02** ขอ "JSON" แล้ว `JSON.parse()` — รูปแบบที่ผิดเจอได้จริง:
 ```
 ✅ JSON สะอาด
-❌ ห่อด้วย markdown → Unexpected token '`', "```json …
-❌ มีคำนำหน้า → Unexpected token 'ไ', "ได้เลยครับ"...
-❌ ใช้ single quote → Expected property name or '}' in JSON …
-❌ ตัดกลางคัน → Expected ',' or '}' after property value …
+❌ ห่อด้วย markdown → Unexpected token '`', "```json
+{""... is not valid
+❌ มีคำนำหน้า → Unexpected token 'ไ', "ได้เลยครับ"... is not valid
+❌ ใช้ single quote → Expected property name or '}' in JSON at position 
+❌ ตัดกลางคัน → Expected ',' or '}' after property value in JSON a
+
+คำตอบดิบ: "{\"name\":\"เสื้อสีดำ\",\"price\":350}"
+parse สำเร็จ แต่ type ของ price คือ: number (ไม่มีอะไรรับประกันว่าเป็น number)
 ```
 และต่อให้ parse ได้ ก็ไม่มีอะไรรับประกัน**ชนิดของค่า** (`price` อาจเป็น string)
 
@@ -110,15 +112,21 @@ flowchart LR
 
 ## 7. Coding Examples
 
-รัน `pnpm play 6-N` ผลลัพธ์ที่ให้คือ *ตัวอย่างผลลัพธ์ — LLM ไม่ได้ตอบเหมือนเดิมทุกครั้ง* (ตรวจกับ Groq `openai/gpt-oss-20b`; 06-04 ตรวจกับ DeepSeek ด้วย)
+รัน `pnpm play 6-N` ผลลัพธ์ที่ให้คือ *ตัวอย่างผลลัพธ์ — LLM ไม่ได้ตอบเหมือนเดิมทุกครั้ง* (บันทึกจาก TokenMe `deepseek-ai/deepseek-v4.1-flash-1017`; 06-04 เทียบ Groq/DeepSeek ด้วย)
 
-> **หมายเหตุ provider:** ค่าเริ่มต้นของ repo ตอนนี้คือ **TokenMe** (`TOKENME_API_KEY`) — ทุกตัวอย่างถูกรันซ้ำบน TokenMe แล้วผ่าน แต่ข้อความ/ตัวเลข token/เวลาที่แสดงด้านล่างบันทึกไว้จากการรันบน Groq จึงจะไม่ตรงกับที่คุณเห็นเป๊ะ (ไม่ใช่ข้อผิดพลาด)
 
 - **06-01 Unstructured Response, 06-02 JSON Output Problem:** ดูหัวข้อ 4
 
 ### 06-03 Basic Zod Schema (ไม่เรียก LLM)
 ```
-parse() ผ่าน: { name: 'เสื้อ', price: 350, inStock: true, tags: [ 'ใหม่' ], category: 'clothing', discount: null }
+parse() ผ่าน: {
+  name: 'เสื้อ',
+  price: 350,
+  inStock: true,
+  tags: [ 'ใหม่' ],
+  category: 'clothing',
+  discount: null
+}
 
 safeParse().success: false
   - price: Invalid input: expected number, received string
@@ -130,40 +138,68 @@ parse() throw: ZodError
 ### 06-04 withStructuredOutput()
 ```
 [tokenme] { name: 'เสื้อสีดำ', price: 350, sizes: [ 'M', 'L' ] } | typeof price = number
-[groq] { name: 'เสื้อสีดำ', price: 350, sizes: [ 'M', 'L' ] } | typeof price = number
+[groq] { name: 'เสื้อ', price: 350, sizes: [ 'M', 'L' ] } | typeof price = number
 [deepseek] { name: 'เสื้อ', price: 350, sizes: [ 'M', 'L' ] } | typeof price = number
 ```
 
 ### 06-05 Enum Classification
 ```
 "สั่งของไปสามวันแล้ว พัสดุยังไม่ถึงเลยครับ"
-  → { intent: 'order_status', sentiment: 'negative', confidence: 0.9 }
+  → { intent: 'complaint', sentiment: 'negative', confidence: 0.95 }
 "ขอคืนเงินได้ไหม สินค้าชำรุด"
-  → { intent: 'refund', sentiment: 'negative', confidence: 0.92 }
+  → { intent: 'refund', sentiment: 'negative', confidence: 0.95 }
 "รุ่นนี้กันน้ำไหมคะ"
-  → { intent: 'product_question', sentiment: 'neutral', confidence: 0.95 }
+  → { intent: 'product_question', sentiment: 'neutral', confidence: 0.98 }
 ```
 
 ### 06-06 Nested Object
 ```
-{ "customer": { "name": "คุณสมศรี ใจดี", "phone": "081-234-5678" },
-  "address": { "street": "99/1 ถนนสุขุมวิท", "district": "เวชินทร์", "province": "กรุงเทพฯ", "postalCode": "10110" },
-  "total": 1250 }
+{
+  "customer": {
+    "name": "คุณสมศรี ใจดี",
+    "phone": "081-234-5678"
+  },
+  "address": {
+    "street": "99/1 ถนนสุขุมวิท",
+    "district": "เขตวัฒนา",
+    "province": "กรุงเทพฯ",
+    "postalCode": "10110"
+  },
+  "total": 1250
+}
+
+เข้าถึงข้อมูลซ้อนได้แบบ type-safe: กรุงเทพฯ | 081-234-5678
 ```
 ⚠️ สังเกต: ข้อความต้นทางเขียน "เขตวัฒนา" แต่ model ตอบ `district: "เวชินทร์"` — **โครงสร้างถูกต้องแต่ค่าผิดได้** (hallucination) Schema ไม่ช่วยตรวจเนื้อหา
 
 ### 06-07 Array of Objects
 ```
-│ 0 │ 'ปากกา' │ 3 │ 15 │
-│ 1 │ 'สมุด'   │ 2 │ 45 │
-│ 2 │ 'ยางลบ' │ 1 │ 10 │
+┌─────────┬─────────┬──────────┬───────────┐
+│ (index) │ name    │ quantity │ unitPrice │
+├─────────┼─────────┼──────────┼───────────┤
+│ 0       │ 'ปากกา' │ 3        │ 15        │
+│ 1       │ 'สมุด'   │ 2        │ 45        │
+│ 2       │ 'ยางลบ' │ 1        │ 10        │
+└─────────┴─────────┴──────────┴───────────┘
 ยอดรวมที่โค้ดคำนวณ: 145 บาท
 ```
 
 ### 06-08 Optional Fields — ใช้ `nullable()` ป้องกันการเดา
 ```
-"หมวกแก๊ปสีแดง 199 บาท ลด 10%"  → { name: 'หมวกแก๊ป', price: 199, discountPercent: 10, color: 'แดง' }
-"ที่ชาร์จมือถือ 250 บาท"          → { name: 'ที่ชาร์จมือถือ', price: 250, discountPercent: null, color: null }
+"หมวกแก๊ปสีแดง 199 บาท ลด 10%"
+  → {
+  name: 'หมวกแก๊ปสีแดง',
+  price: 199,
+  discountPercent: 10,
+  color: 'แดง'
+}
+"ที่ชาร์จมือถือ 250 บาท"
+  → {
+  name: 'ที่ชาร์จมือถือ',
+  price: 250,
+  discountPercent: null,
+  color: null
+}
 ```
 
 ### 06-09 Validate Business Rules
@@ -182,8 +218,12 @@ parse() throw: ZodError
   ครั้งที่ 2: ❌ schema → คำตอบก่อนหน้าไม่ถูกต้อง: price Invalid input: expected number, received string
   ครั้งที่ 3: ✅
   ผลลัพธ์: { name: 'เสื้อ', price: 350 }
+
 (ข) ถ้าลองครบแล้วยังไม่ผ่าน ต้อง throw ให้ผู้เรียกรู้
+  ครั้งที่ 1: ❌ ไม่ใช่ JSON
+  ครั้งที่ 2: ❌ ไม่ใช่ JSON
   ❌ ได้ output ที่ถูกต้องไม่สำเร็จหลัง 2 ครั้ง
+
 (ค) ของจริง: withStructuredOutput + try/catch + retry
   ผลลัพธ์: { name: 'เสื้อสีดำ', price: 350 }
 ```

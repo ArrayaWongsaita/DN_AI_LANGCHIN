@@ -101,7 +101,7 @@ export function check(s: Scenario, out: unknown): CheckResult[] {
 }
 
 async function main() {
-  const { values } = parseArgs({ options: { set: { type: "string", default: "tuning" }, samples: { type: "string", default: "3" }, show: { type: "string", default: "3" } } });
+  const { values } = parseArgs({ options: { set: { type: "string", default: "tuning" }, samples: { type: "string", default: "3" }, show: { type: "string", default: "3" }, dump: { type: "boolean", default: false } } });
   const chosen = scenarios.filter((s) => values.set === "all" || s.set === values.set);
   const N = Number(values.samples);
   const model = await createChatModel(chatModelOptions((process.env.AI_PROVIDER as "tokenme" | "groq" | "deepseek" | undefined) ?? "tokenme")); // ตั้งค่าเดียวกับแอปจริง
@@ -116,6 +116,7 @@ async function main() {
       results.push({ s: job.s, out, checks: check(job.s, out) });
     }
   }));
+  if (values.dump) for (const sc of chosen) { const x = results.find((r) => r.s.id === sc.id); if (x) console.log(`\n[${sc.id}] ${JSON.stringify(x.out, null, 1)}`); } // อ่านด้วยตาคนเอง (ไม่ใช่แค่กฎ)
   const perfect = results.filter((x) => x.checks.every((c) => c.ok)).length;
   const byCheck = new Map<string, { ok: number; n: number }>();
   for (const x of results) for (const c of x.checks) { const e = byCheck.get(c.name) ?? { ok: 0, n: 0 }; e.n++; if (c.ok) e.ok++; byCheck.set(c.name, e); }

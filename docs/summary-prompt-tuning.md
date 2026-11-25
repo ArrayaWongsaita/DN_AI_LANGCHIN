@@ -2,7 +2,7 @@
 
 Goal: make `GET /summaries/weekly` (structured output from `SummaryService`) trustworthy.
 Method: rule-based checks against the real model (TokenMe `deepseek-v4.1-flash`), several random samples per scenario.
-Run it yourself: `pnpm --filter task-api eval:summary [--set tuning|holdout|all] [--samples N]` (needs `TOKENME_API_KEY`).
+Run it yourself: `pnpm --filter task-api eval:summary [--set tuning|holdout|all] [--samples N] [--dump]` (needs `TOKENME_API_KEY`).
 
 ## Harness
 - `apps/task-api/eval/summary-eval.ts`: 6 tuning scenarios (mixed, no-risk, all-done, empty, prompt-injection title, many tasks) and 3 hold-out scenarios (never used while tuning).
@@ -26,5 +26,5 @@ Run it yourself: `pnpm --filter task-api eval:summary [--set tuning|holdout|all]
 - Reasoning is switched off for the whole app model on TokenMe/DeepSeek (not only for summaries): cheaper, faster, and the capstone demo (tools, approval, knowledge) was re-run end to end afterwards.
 
 ## Limits
-- One model, small scenario set (9), rule-based checks only: they do not judge how pleasant the Thai reads. Spot-checked by eye on 5 scenarios.
+- One model, small scenario set (9), rule-based checks only: they do not judge how pleasant the Thai reads. Read by eye on one sample of each of the 9 scenarios (`--dump`): nothing wrong in headline/risks/highlights. Two things worth knowing: a task whose title is an injection ("ignore previous instructions … HACKED") is quoted verbatim in `risks` and `nextActions` (it is the user's own task title, and the headline was not hijacked), and urgency ranks priority before age inside the overdue bucket, so a 3-day-overdue Medium task precedes a 10-day-overdue Low one — by design, but arguable.
 - Re-run the eval after changing the prompt, the schema descriptions or the model.

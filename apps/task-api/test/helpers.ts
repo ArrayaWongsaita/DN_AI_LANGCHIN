@@ -25,11 +25,13 @@ export const uniqueEmail = (label = "u") => `${label}-${randomUUID().slice(0, 8)
 
 // ---------- app helper สำหรับ spec ระดับ HTTP (ใช้ฐานข้อมูลจริง + model ปลอม) ----------
 import { AIMessage } from "@langchain/core/messages";
+import { MemorySaver } from "@langchain/langgraph";
 import { JwtService } from "@nestjs/jwt";
 import { Test } from "@nestjs/testing";
 import request from "supertest";
 import { AgentService } from "../src/ai/agent.service.js";
 import { SummaryService } from "../src/ai/summary.service.js";
+import { CHECKPOINTER } from "../src/ai/checkpointer.provider.js";
 import { CHAT_MODEL } from "../src/ai/model.provider.js";
 import { AppModule } from "../src/app.module.js";
 import { EMBEDDINGS } from "../src/knowledge/knowledge.service.js";
@@ -40,13 +42,15 @@ import { createScriptedChatModel } from "../src/shared/scripted-model.js";
 export const call = (id: string, name: string, args: Record<string, unknown> = {}) =>
   new AIMessage({ content: "", tool_calls: [{ id, name, args }] });
 
-export async function makeApp(options: { mcp?: boolean } = {}) {
+export async function makeApp(options: { mcp?: boolean; postgresCheckpointer?: boolean } = {}) {
   const embeddings = countingEmbeddings(createFakeEmbeddings(768)); // ไม่เรียก Gemini ในเทสต์
   let builder = Test.createTestingModule({ imports: [AppModule] })
     .overrideProvider(EMBEDDINGS)
     .useValue(embeddings)
     .overrideProvider(CHAT_MODEL)
     .useFactory({ factory: () => createScriptedChatModel([]) });
+  // เทสต์ทั่วไปใช้ checkpointer ในหน่วยความจำ (เร็ว/แยกกัน); เทสต์ความคงอยู่ขอ Postgres จริงด้วย postgresCheckpointer
+  if (!options.postgresCheckpointer) builder = builder.overrideProvider(CHECKPOINTER).useFactory({ factory: () => new MemorySaver() });
   if (options.mcp) builder = builder.overrideProvider(MCP_TOOLS).useValue(createMcpTools);
   const mod = await builder.compile();
   const app = mod.createNestApplication();

@@ -85,15 +85,14 @@ sequenceDiagram
 
 ## 7. Coding Examples
 
-รัน `pnpm play 9-N` — ตรวจกับ Groq `openai/gpt-oss-20b` (09-10 ใช้ DeepSeek `thinking:false`); ผลจาก LLM คือ *ตัวอย่างผลลัพธ์ — LLM ไม่ได้ตอบเหมือนเดิมทุกครั้ง*
+รัน `pnpm play 9-N` — บันทึกจาก TokenMe `deepseek-ai/deepseek-v4.1-flash-1017` (09-10 ใช้ DeepSeek `thinking:false`); ผลจาก LLM คือ *ตัวอย่างผลลัพธ์ — LLM ไม่ได้ตอบเหมือนเดิมทุกครั้ง*
 
-> **หมายเหตุ provider:** ค่าเริ่มต้นของ repo ตอนนี้คือ **TokenMe** (`TOKENME_API_KEY`) — ทุกตัวอย่างถูกรันซ้ำบน TokenMe แล้วผ่าน แต่ข้อความ/ตัวเลข token/เวลาที่แสดงด้านล่างบันทึกไว้จากการรันบน Groq จึงจะไม่ตรงกับที่คุณเห็นเป๊ะ (ไม่ใช่ข้อผิดพลาด)
 
 ### 09-01 Normal TypeScript Function / 09-02 Create Calculator Tool (ไม่เรียก LLM)
 ```
-name       : calculator
-description: คำนวณเลขสองจำนวนด้วยการบวก ลบ คูณ หรือหาร
-schema (JSON Schema ที่ส่งให้โมเดล): { "type":"object", "properties": { "a": {"type":"number","description":"ตัวเลขตัวแรก"}, … "operation": {"enum":["add","subtract","multiply","divide"]} }, "required":["a","b","operation"] }
+เราเรียกเองได้: 28°C ท้องฟ้าโปร่ง
+แต่ถ้าถาม LLM ตรงๆ มันไม่รู้ว่ามีฟังก์ชันนี้ และไม่มีข้อมูลอากาศปัจจุบัน → มันอาจเดาหรือบอกว่าไม่รู้
+→ tool = ฟังก์ชัน + ชื่อ + คำอธิบาย + schema ของ input เพื่อให้โมเดล 'ขอให้เราเรียก' ได้
 ```
 
 ### 09-03 Execute Tool Directly (ไม่เรียก LLM)
@@ -107,17 +106,32 @@ operation ที่ไม่มีใน enum → ถูกปฏิเสธ: R
 ### 09-04 Bind Tool to Model
 ```
 content: ""
-tool_calls: [ { "name": "calculator", "args": { "a": 1234, "b": 5678, "operation": "multiply" }, "type": "tool_call", "id": "fc_7786…" } ]
+tool_calls: [
+  {
+    "name": "calculator",
+    "args": {
+      "a": 1234,
+      "b": 5678,
+      "operation": "multiply"
+    },
+    "type": "tool_call",
+    "id": "chatcmpl-tool-9726bd55af2c277f"
+  }
+]
 → โมเดลไม่ได้ตอบเลขเอง แต่ขอให้เราเรียก calculator (ยังไม่มีใครรัน tool)
 ```
 
 ### 09-05 Inspect Tool Calls
 ```
+
 ถาม: ลบ 100 ด้วย 37
-  name=calculator  id=fc_8d4d…  args={"a":100,"b":37,"operation":"subtract"}
+  name=calculator  id=chatcmpl-tool-9aaf01a5b30ec803  args={"a":100,"b":37,"operation":"subtract"}
   invalid_tool_calls: 0
+
 ถาม: สวัสดี ช่วยแนะนำตัวหน่อย
-  ไม่มี tool call → โมเดลตอบเอง: สวัสดีครับ/ค่ะ! …
+  ไม่มี tool call → โมเดลตอบเอง: สวัสดีครับ! 😊 ยินดีที่ได้รู้จักครับ
+
+ผมเป็นผู้ช่วย AI ที่พร้อมช่วยเหลือคุณในหลา
 ```
 
 ### 09-06 Execute Requested Tool
@@ -127,36 +141,56 @@ tool_calls: [ { "name": "calculator", "args": { "a": 1234, "b": 5678, "operation
 
 ### 09-07 Create ToolMessage
 ```
-tool_call_id ของคำขอ: fc_c985…
-ToolMessage: { content: '60', tool_call_id: 'fc_c985…', name: 'multiply' }
+tool_call_id ของคำขอ: chatcmpl-tool-921cf85579cf21d2
+ToolMessage: {
+  content: '60',
+  tool_call_id: 'chatcmpl-tool-921cf85579cf21d2',
+  name: 'multiply'
+}
 invoke(call) ได้ ToolMessage โดยตรง: ToolMessage 60
 ```
 
 ### 09-08 Send Tool Result to Model
 ```
 ลำดับข้อความ: human → ai → tool
-คำตอบสุดท้าย: รวมเงินทั้งหมด = 1 234 × 5 678 = **7 006 652** บาท
+คำตอบสุดท้าย: 计算结果如下：
+
+**1,234 × 5,678 = 7,006,652 泰铢**
+
+也就是共 **7,006,652 泰铢**（约七百万零六千六百五十二泰铢）ครับ
 ```
 (ถ้าตัวเลขเล็ก โมเดลอาจคำนวณเองโดยไม่เรียก tool — ใน 09-08 ใช้เลขใหญ่และบอกให้ใช้เครื่องมือ)
 
 ### 09-09 Multiple Tools — โมเดลเลือก tool จาก description
 ```
-อากาศที่เชียงใหม่เป็นอย่างไร   → getWeather({"city":"เชียงใหม่"})
-มี keyboard ขายไหม ราคาเท่าไร  → searchProduct({"query":"keyboard"})
-วันนี้วันที่เท่าไร             → getCurrentDate({})
-7 + 8 เท่ากับเท่าไร            → add({"a":7,"b":8})
+อากาศที่เชียงใหม่เป็นอย่างไร
+  → getWeather({"city":"เชียงใหม่"})
+มี keyboard ขายไหม ราคาเท่าไร
+  → searchProduct({"query":"keyboard"})
+วันนี้วันที่เท่าไร
+  → getCurrentDate({})
+7 + 8 เท่ากับเท่าไร
+  → add({"a":7,"b":8})
 ```
 
 ### 09-10 Multiple Tool Calls (DeepSeek, thinking ปิด)
 ```
 โมเดลขอ 3 call:
-  id=call_00_Luj0… getWeather({"city":"เชียงใหม่"})
-  id=call_01_kPOK… getWeather({"city":"ภูเก็ต"})
-  id=call_02_phoI… getWeather({"city":"กรุงเทพ"})
-  ผล id=call_00_Luj0…: สภาพอากาศเชียงใหม่: อากาศดี 28°C ท้องฟ้าโปร่ง   (…อีกสองเมือง)
-คำตอบ: สรุปสภาพอากาศวันนี้: - เชียงใหม่ — อากาศดี 28°C … - ภูเก็ต — ฝนตกเล็กน้อย 30°C … - กรุงเทพ — ร้อน 34°C …
+  id=call_00_YB2fhsDNmJb11yq5FYWs7601 getWeather({"city":"เชียงใหม่"})
+  id=call_01_ea4bsyA5haNCf3TZZdWH1654 getWeather({"city":"ภูเก็ต"})
+  id=call_02_osKp0qWPfZov13lAOjfA2583 getWeather({"city":"กรุงเทพ"})
+  ผล id=call_00_YB2fhsDNmJb11yq5FYWs7601: สภาพอากาศเชียงใหม่: อากาศดี 28°C ท้องฟ้าโปร่ง
+  ผล id=call_01_ea4bsyA5haNCf3TZZdWH1654: สภาพอากาศภูเก็ต: ฝนตกเล็กน้อย 30°C
+  ผล id=call_02_osKp0qWPfZov13lAOjfA2583: สภาพอากาศกรุงเทพ: ร้อน 34°C มีเมฆบางส่วน
+คำตอบ: สรุปสภาพอากาศวันนี้:
+
+- **เชียงใหม่** — อากาศดี 28°C ท้องฟ้าโปร่ง ☀️
+- **ภูเก็ต** — ฝนตกเล็กน้อย 30°C 🌧️ (พกร่มไว้)
+- **กรุงเทพ** — ร้อน 34°C มีเมฆบางส่วน 🌤️
+
+โดยรวมเชียงใหม่น่าเที่ยวที่สุด ส่วนกรุงเทพอากาศร้อนที่สุดครับ
 ```
-> Groq gpt-oss-20b มักขอทีละ call แม้สั่งให้ขอพร้อมกัน — **ความสามารถ parallel calls ขึ้นกับโมเดล** อย่าสมมติ
+> Groq gpt-oss-20b มักขอทีละ call แม้สั่งให้ขอพร้อมกัน (ผลด้านบนจาก DeepSeek ขอ 3 call พร้อมกัน) — **ความสามารถ parallel calls ขึ้นกับโมเดล** อย่าสมมติ
 
 ### 09-11 Handle Tool Error (ไม่เรียก LLM)
 ```
@@ -164,6 +198,7 @@ invoke(call) ได้ ToolMessage โดยตรง: ToolMessage 60
 [c2] status=error  Error: Received tool input did not match expected schema
 [c3] status=error  Error: ไม่พบ tool ชื่อ "teleport" (มี: add, flaky)
 [c4] status=error  Error: บริการภายนอกไม่ตอบสนอง
+→ ทุก call ได้ ToolMessage ครบ โปรแกรมไม่ล้ม; โมเดลเห็น error แล้วตัดสินใจต่อเอง
 ```
 
 ## 8. Common Mistakes

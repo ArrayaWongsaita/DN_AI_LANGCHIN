@@ -1,9 +1,9 @@
 import type { BaseChatModel } from "@langchain/core/language_models/chat_models";
 import { isAIMessage, ToolMessage, type BaseMessage } from "@langchain/core/messages";
-import { Command, MemorySaver } from "@langchain/langgraph";
+import { Command } from "@langchain/langgraph";
 import { Inject, Injectable } from "@nestjs/common";
 import type { StructuredToolInterface } from "@langchain/core/tools";
-import type { BaseStore } from "@langchain/langgraph-checkpoint";
+import type { BaseCheckpointSaver, BaseStore } from "@langchain/langgraph-checkpoint";
 import { createAgent, modelCallLimitMiddleware, modelFallbackMiddleware, modelRetryMiddleware, summarizationMiddleware, toolCallLimitMiddleware, type AgentMiddleware } from "langchain";
 import { MCP_TOOLS, type McpToolsFactory } from "../mcp/mcp-tools.js";
 import { isTransientModelError } from "../shared/retry.js";
@@ -12,6 +12,7 @@ import { KnowledgeService } from "../knowledge/knowledge.service.js";
 import { TasksService } from "../tasks/tasks.service.js";
 import { createToolErrorMiddleware } from "./tool-errors.middleware.js";
 import { createApprovalMiddleware, type ApprovalDecision } from "./approval.middleware.js";
+import { CHECKPOINTER } from "./checkpointer.provider.js";
 import { CHAT_MODEL, FALLBACK_MODEL } from "./model.provider.js";
 import { createDynamicPromptMiddleware } from "./dynamic-prompt.middleware.js";
 import { createLoggingMiddleware, type LogEvent } from "./logging.middleware.js";
@@ -78,9 +79,8 @@ function sumUsage(messages: BaseMessage[]): Usage {
 
 @Injectable()
 export class AgentService {
-  private readonly checkpointer = new MemorySaver();
-
   constructor(
+    @Inject(CHECKPOINTER) private readonly checkpointer: BaseCheckpointSaver,
     @Inject(CHAT_MODEL) private model: BaseChatModel,
     @Inject(TasksService) private readonly tasks: TasksService,
     @Inject(KnowledgeService) private readonly knowledge: KnowledgeService,

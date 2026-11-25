@@ -23,16 +23,16 @@ function Settings() {
     <div className="space-y-3 p-4 text-sm">
       <h1 className="text-lg font-semibold">ความชอบของฉัน</h1>
       <p className="text-xs text-slate-500">AI จำค่าเหล่านี้ข้ามทุกบทสนทนา เช่น language = ไทย, tone = กระชับ</p>
-      <form onSubmit={save} className="flex gap-2">
-        <input value={key} onChange={(e) => setKey(e.target.value)} placeholder="key (เช่น tone)" aria-label="key" className="w-40 rounded border px-3 py-2" />
-        <input value={value} onChange={(e) => setValue(e.target.value)} placeholder="ค่า" aria-label="ค่า" className="flex-1 rounded border px-3 py-2" />
+      <form onSubmit={save} className="flex flex-wrap gap-2">
+        <input value={key} onChange={(e) => setKey(e.target.value)} placeholder="key (เช่น tone)" aria-label="key" className="w-full rounded border px-3 py-2 sm:w-40" />
+        <input value={value} onChange={(e) => setValue(e.target.value)} placeholder="ค่า" aria-label="ค่า" className="min-w-0 flex-1 rounded border px-3 py-2" />
         <button className="rounded bg-slate-900 px-4 py-2 text-white">บันทึก</button>
       </form>
       {error && <p role="alert" className="text-red-700">{error}</p>}
       {prefs && Object.keys(prefs).length === 0 && <p className="text-slate-500">ยังไม่มีค่าที่บันทึกไว้</p>}
       <ul className="divide-y rounded-lg border bg-white">
         {Object.entries(prefs ?? {}).map(([k, v]) => (
-          <li key={k} className="flex items-center gap-3 px-3 py-2"><span className="w-40 font-mono text-xs">{k}</span><span className="flex-1">{v}</span><button onClick={() => remove(k)} className="text-xs text-red-700">ลบ</button></li>
+          <li key={k} className="flex items-center gap-3 px-3 py-2"><span className="w-24 shrink-0 break-all font-mono text-xs sm:w-40">{k}</span><span className="min-w-0 flex-1 break-words">{v}</span><button onClick={() => remove(k)} className="text-xs text-red-700">ลบ</button></li>
         ))}
       </ul>
     </div>

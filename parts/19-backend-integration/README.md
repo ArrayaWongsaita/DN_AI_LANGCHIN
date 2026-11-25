@@ -2,7 +2,7 @@
 
 ระดับ: Advanced · เวลา: 120–150 นาที · โค้ดทั้งหมดอยู่ที่ [`apps/task-api/`](../../apps/task-api/) (NestJS 12 + Prisma 7 + PostgreSQL) · tag `part-19-01` … `part-19-15`
 ต่างจาก Part อื่น Part นี้ **ไม่มี `pnpm play`** — ตัวอย่างคือโมดูลของแอปจริง แต่ละโมดูลมี git tag (`git checkout part-19-05` เพื่อดูสถานะ ณ โมดูลนั้น) และ spec (`pnpm --filter task-api test`) เป็นหลักฐานว่าทำงาน
-ผลลัพธ์ที่เรียก model บันทึกจากการรันบน DeepSeek (Groq โควตารายวันหมดตอนทำ Part นี้) — ค่าเริ่มต้นตอนนี้คือ TokenMe และรันซ้ำผ่านแล้ว — LLM ไม่ได้ตอบเหมือนเดิมทุกครั้ง
+ผลลัพธ์ที่เรียก model บันทึกจากการรันบน TokenMe (ค่าเริ่มต้น) — LLM ไม่ได้ตอบเหมือนเดิมทุกครั้ง
 
 ## 1. Introduction
 
@@ -76,7 +76,7 @@ src/
                    buildRuntimeContext ───────────▶ AgentService ──▶ createAgent
                    { userId, role, locale }             │   ▲            │ middleware: Untrusted · HITL · ExecutionGuard
                                                         │   │ context    ▼
-                                      MemorySaver ◀─────┘   └──── Tools ──▶ TasksService ──▶ Repository ──▶ PostgreSQL
+                                      PostgresSaver ◀───┘   └──── Tools ──▶ TasksService ──▶ Repository ──▶ PostgreSQL
                                    (thread = user:<id>:conv:<id>)  (userId มาจาก context เท่านั้น, where userId=… ทุก query)
                                                         │
                                   interrupt ──▶ Approval(pending→resolving→decided|stale) ──▶ POST …/approvals/:id
@@ -109,10 +109,10 @@ export const chatModelProvider: Provider = {
 
 ### 19-04 Chat Controller — `part-19-04`
 `POST /chat` ตรวจ body ด้วย Zod: ข้อความว่าง/ยาวเกิน → 400, `threadId` ที่มี `:` หรือ `../` → 400 (กันแทรก namespace)
-ทดลองจริง (DeepSeek):
+ทดลองจริง (TokenMe):
 ```
 $ curl -X POST /chat -d '{"message":"เพิ่มงาน ซื้อกาแฟ ความสำคัญสูง แล้วบอกว่ามีงานอะไรบ้าง"}'
-{"reply":"เพิ่มงาน \"ซื้อกาแฟ\" (ความสำคัญสูง) แล้วครับ\n\nงานทั้งหมดที่มีตอนนี้:\n1. ซื้อกาแฟ — Pending — High — ไม่มีกำหนดส่ง", "toolCalls":[{"name":"createTask","args":{"title":"ซื้อกาแฟ","priority":"High"}},{"name":"getTasks","args":{}}]}
+{"reply":"สร้างงาน \"ซื้อกาแฟ\" (ความสำคัญ High) แล้วครับ\n\nงานทั้งหมดที่มีตอนนี้: มีแค่ \"ซื้อกาแฟ\" (Pending, High, ไม่มีกำหนด) — ยังไม่มีงานอื่นในระบบ","usage":{"inputTokens":3796,"outputTokens":121},"toolCalls":[{"name":"createTask","args":{"title":"ซื้อกาแฟ","priority":"High"}},{"name":"getTasks","args":{}}]}
 ข้อความว่าง → 400    ไม่มี token → 401
 ```
 
@@ -140,16 +140,16 @@ const config = { configurable: { thread_id: ownedThreadId(ctx.userId, conversati
 ```
 GET /conversations/:id/messages → ["human","ai","tool","ai"]  (ai รอบแรกมี toolCalls: createTask)
 ```
-> ข้อจำกัดที่ต้องบอกตรงๆ: checkpointer เป็น `MemorySaver` (ในหน่วยความจำ) — รีสตาร์ทเซิร์ฟเวอร์แล้วประวัติและคำขออนุมัติที่ค้างหาย เปลี่ยนเป็น Postgres checkpointer (Part 12) ได้โดยไม่แตะส่วนอื่น
+> checkpointer เป็น `PostgresSaver` (schema `langgraph` ในฐานข้อมูลเดียวกัน, `setup()` ตอนเริ่ม, ปิด pool ตอน shutdown) — รีสตาร์ทแล้วประวัติไม่หาย (spec `checkpointer-persistence`); ตั้ง `CHECKPOINTER=memory` เพื่อใช้ `MemorySaver` ในเครื่องที่ไม่มี DB · ที่ยังอยู่ใน RAM: preferences store, rate limiter, lock ต่อบทสนทนา
 
 ### 19-10 SSE Streaming — `part-19-10`
 `POST /conversations/:id/chat/stream` ตรวจสิทธิ์ **ก่อน** เริ่มสตรีม (ผิด → 404/401 ปกติ) แล้วตอบ `text/event-stream` ใช้ `agent.stream({ streamMode: ["messages","updates"], signal })` และ `res.on("close")` → `abort()` เมื่อ client ตัดสาย งานจะหยุด (spec: ตัดสายหลัง event แรก → model ถูกเรียกไม่เกิน 1 รอบถัดไป ทั้งที่สคริปต์ยาว 7)
-ผลจริงจาก `scripts/smoke.sh` (DeepSeek):
+ผลจริงจาก `scripts/smoke.sh` (TokenMe):
 ```
 4) stream:
    1 event: tool_start
    1 event: tool_end
-  39 event: token
+  46 event: token
    1 event: done
 ```
 
@@ -157,7 +157,7 @@ GET /conversations/:id/messages → ["human","ai","tool","ai"]  (ai รอบแ
 `POST /conversations/:id/approvals/:approvalId` body `{ decision: "approve"|"reject"|"edit", args? }` ลำดับในโค้ด: (1) หา approval ของผู้ใช้+บทสนทนานี้ ไม่ใช่ = 404 → (2) ตัดสินแล้ว? คืนผลเดิม → (3) **ตรวจซ้ำก่อนรัน** ว่างานยังมีและเป็นของผู้ใช้ ไม่ใช่ → 409 "งานนี้ไม่มีอยู่แล้ว … ไม่มีอะไรถูกลบ" → (4) *claim* แบบ atomic (`updateMany where status=pending`) ผู้ชนะคนเดียว → (5) `Command({ resume })` → (6) บันทึกผล + `AuditLog` ใน transaction; `ExecutionGuard` ใน middleware ตรวจซ้ำอีกชั้นตอนรัน tool
 ```
 5) ขอลบ → ต้องรออนุมัติ     approval actions: deleteTask{"id":"c5a1c1c1-…"}
-6) approve                  ลบงาน "ซื้อกาแฟ" แล้วครับ
+6) approve                  ลบงาน "ซื้อกาแฟ" เรียบร้อยแล้วครับ
 7) approve ซ้ำ              ลบงาน "ซื้อกาแฟ" แล้วครับ        ← ผลเดิม ลบครั้งเดียว
 ```
 spec ครอบคลุม: เรียกซ้ำ, เรียกพร้อมกัน 2 คำขอ (audit 1 แถว), reject, edit (ลบงานอื่นของตน), งานหายระหว่างรอ → 409, งานของคนอื่น + `userId` ที่ model ใส่มา → 409 และงานคนอื่นยังอยู่, approval ข้ามบทสนทนา → 404

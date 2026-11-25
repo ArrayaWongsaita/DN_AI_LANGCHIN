@@ -2,7 +2,7 @@
 
 ระดับ: Advanced · เวลา: 4–6 ชั่วโมง · โค้ด: [`apps/task-api/`](../../apps/task-api/) (NestJS 12 + Prisma 7 + PostgreSQL/pgvector) และ [`apps/task-web/`](../../apps/task-web/) (Next.js 16 + React 19 + Tailwind 4) · tag `milestone-01` … `milestone-13`
 Part นี้ไม่มี `pnpm play` — มันคือ "ประกอบทุกอย่างที่เรียนมาเป็นระบบเดียว" แต่ละ milestone มี spec/คำสั่งตรวจ และ git tag ให้ `git checkout` ย้อนดูสถานะได้
-ผลลัพธ์ที่วางไว้บางส่วนบันทึกจาก DeepSeek แล้วรันซ้ำบน TokenMe ผ่าน + Gemini embeddings จริง — LLM ตอบไม่เหมือนเดิมทุกครั้ง ตัวเลข token/ข้อความที่แสดงเป็นผลจากรันจริงครั้งหนึ่ง
+ผลลัพธ์ที่วางไว้บันทึกจากการรัน `scripts/capstone-demo.sh` บน TokenMe + Gemini embeddings จริง — LLM ตอบไม่เหมือนเดิมทุกครั้ง ตัวเลข token/ข้อความที่แสดงเป็นผลจากรันจริงครั้งหนึ่ง
 
 ## 1. Introduction
 
@@ -74,7 +74,7 @@ approve dialog ◄─ approval_required ─ Approval table (idempotent, recheck,
 
 **Milestone 05–06 — agent และสรุปสัปดาห์.** `GET /summaries/weekly` ใช้ `withStructuredOutput` (Zod) แล้ว `safeParse` ซ้ำเสมอ เพราะ structured output **ไม่ตรวจ enum ให้** — ผลจริง:
 ```
-headline: "สัปดาห์นี้มีงานทั้งหมด 3 งาน ปิดไปแล้ว 1 งาน เหลืองานค้าง 2 งาน โดยมี 1 งานเลยกำหนด"
+headline: "มีงานค้าง 2 งาน เสร็จแล้ว 1 งาน และมีงานเลยกำหนด 1 งาน"
 ```
 
 **Milestone 07–08 — บทสนทนาและ middleware.** thread = `user:<userId>:conv:<conversationId>` ตรวจด้วย `assertThreadOwner` ผู้ใช้อื่นได้ 404 (ไม่บอกว่ามีอยู่) ลำดับ middleware (ตัวแรก = นอกสุด): `toolError → logging → untrusted → dynamicPrompt → modelRetry → modelCallLimit → toolCallLimit → summarization → approval` `recursionLimit` = 150 เพราะ hook ของ middleware แต่ละตัวนับเป็น graph step
@@ -82,9 +82,9 @@ headline: "สัปดาห์นี้มีงานทั้งหมด 3 
 **Milestone 09 — knowledge base.** อัปโหลด `{title, filename(.txt|.md), content ≤ 30,000 ตัวอักษร}` → `RecursiveCharacterTextSplitter` 500/50 → ทิ้ง chunk < 20 ตัว → embed (Gemini 768 มิติ) *ก่อน* เขียน DB → insert ใน transaction เดียว ค้นด้วย `embedding <=> $1::vector`, join กับ `userId`, ตัดที่ distance ≤ 0.35 ผลจริงของรอบนี้:
 ```
 ▶ ขั้นตอน deploy ของทีมเป็นอย่างไร ตอบพร้อมอ้างอิงแหล่งที่มา
-  … อ้างอิง: คู่มือ deploy (deploy.md, ส่วนที่ 1)        tools=["searchKnowledge"]
+  ขั้นตอน deploy ตามคู่มือ (deploy.md, ส่วนที่ 1): … 4 ข้อ   tools=["searchKnowledge"]
 ▶ ราคาหุ้น Tesla วันนี้เท่าไร ค้นจากเอกสารของฉัน
-  ไม่พบข้อมูลที่เกี่ยวข้องในเอกสารครับ …                 tools=["searchKnowledge"]
+  ไม่พบข้อมูลที่เกี่ยวข้องในเอกสารของคุณ                   tools=["searchKnowledge"]
 ```
 ค่า 0.35 ปรับจากชุดเอกสารของ Part 16 — **ต้อง calibrate ใหม่กับเอกสารของคุณ**
 
@@ -93,7 +93,7 @@ headline: "สัปดาห์นี้มีงานทั้งหมด 3 
 **Milestone 11 — frontend.** 8 หน้า: login, register, dashboard (กรองวันนี้/เลยกำหนด/สถานะ), task detail, chat, history, knowledge, settings (preferences) โครงสร้างแชท: `lib/sse.ts` (parser) → `lib/chat-reducer.ts` (state) → `lib/use-chat.ts` → `components/chat/*`
 
 - `SseParser` ใช้ `TextDecoder` แบบ `stream: true` — อักษรไทย 3 ไบต์ที่ถูกตัดกลาง chunk ไม่เพี้ยน (เทสต์ป้อนทีละไบต์)
-- ข้อความจาก model แสดงเป็น text ล้วน (ไม่ render markdown/HTML) กัน XSS
+- ข้อความจาก model render แค่ `**ตัวหนา**` และ `` `โค้ด` `` เป็น React element (ไม่มี HTML ดิบ ไม่ใช้ `dangerouslySetInnerHTML`) กัน XSS; ข้อความของผู้ใช้แสดงเป็น text ล้วน
 - ปุ่ม "หยุด" = `AbortController.abort()` → server เห็น `close` แล้วหยุด
 - dialog อนุมัติแสดง *ชื่องาน* (ค้นจาก id) ไม่ใช่แค่ uuid กดซ้ำไม่ส่งซ้ำ; รีเฟรชหน้าแล้ว dialog กลับมา (จาก `approvals?status=pending`)
 
@@ -137,7 +137,7 @@ headline: "สัปดาห์นี้มีงานทั้งหมด 3 
 **ตัวพิสูจน์ว่าชุดนี้ใช้ได้:** `regressedRunner` คือ agent ที่ถดถอยจงใจ (ไม่มี approval, tool เชื่อ `userId` ที่ model ส่ง) — spec ยืนยันว่ามัน **ตกกรณี** `approval-delete-own`, `authz-delete-foreign`, `authz-delete-foreign-approved`, `authz-model-userid` ชุดประเมินที่ไม่เคยเห็นตัวอย่างที่ควรตก พิสูจน์อะไรไม่ได้
 ผลที่รันจริง: agent จริง **13/13**; agent ที่ถดถอย **7/13** — ตก 6 กรณี: 4 กรณีที่ตั้งใจ (ลบโดยไม่ขออนุมัติ, ลบงานคนอื่น, ลบงานคนอื่นแม้ผ่านการอนุมัติแล้ว, เชื่อ `userId` จาก model) และอีก 2 กรณี (`complete-own`, `priority-own`) เพราะ agent ถดถอยตัวนี้ไม่มี tool เหล่านั้นเลย (ไม่ใช่การพิสูจน์ guard — อย่านับเป็นหลักฐาน) ขีดจำกัด: model สคริปต์ตอบตามบท จึงไม่ได้วัด "model เลือก tool ถูกไหม" — อันนั้นใช้ชุดของ Part 18 (`pnpm play 18-13`) กับ model จริง
 
-**Observability:** ตาราง `UsageLog` บันทึก `{userId, route, status, ms, inputTokens, outputTokens}` ต่อ request (ผลจริง: ประมาณ 2.3–3.7k token input ต่อเทิร์นของเธรดใหม่ — tool 13 ตัวกับ system prompt กินเป็นก้อนใหญ่) LangSmith เปิดได้ด้วย `LANGSMITH_TRACING=true` (ปิดเป็นค่าเริ่มต้น; `pnpm test` ไม่ส่ง trace)
+**Observability:** ตาราง `UsageLog` บันทึก `{userId, route, status, ms, inputTokens, outputTokens}` ต่อ request (ผลจริงบน TokenMe: เทิร์นแรกของเธรดใหม่ใช้ input ประมาณ 3.8k token (วัดได้ 3,773 และ 3,796) แล้วโตตามประวัติ — เทิร์นที่ 8 ≈ 6.3k; tool 13 ตัวกับ system prompt กินเป็นก้อนใหญ่) LangSmith เปิดได้ด้วย `LANGSMITH_TRACING=true` (ปิดเป็นค่าเริ่มต้น; `pnpm test` ไม่ส่ง trace)
 
 ## 11. Security Checklist → หลักฐาน
 
@@ -159,7 +159,7 @@ headline: "สัปดาห์นี้มีงานทั้งหมด 3 
 - `apps/task-api/Dockerfile`, `apps/task-web/Dockerfile` — multi-stage, ไม่มี secret ใน image (รับ env ตอนรัน), รันด้วย user `node` ที่ไม่ใช่ root (Dockerfile ตอนแรกพังสองจุด: ไม่มี `corepack` ใน node:26 และ `prisma generate` หา schema/.env ไม่เจอ — แก้แล้วเมื่อ build จริง)
 - ตัวแปรที่ต้องตั้งบน host: `TASK_API_DATABASE_URL`, `JWT_SECRET` (สุ่ม ≥ 32 ไบต์), `TOKENME_API_KEY` (หรือ `GROQ_API_KEY`/`DEEPSEEK_API_KEY` + `AI_PROVIDER`), `GOOGLE_API_KEY` (embeddings), `WEB_ORIGIN` (origin ของเว็บ — CORS อนุญาตเฉพาะนี้), `NEXT_PUBLIC_API_URL` (ถูกฝังตอน *build* ของเว็บ และ **เปิดเผยในเบราว์เซอร์** — ห้ามใส่ความลับ)
 - migration: `prisma migrate deploy` (ไม่ใช่ `migrate dev`) ก่อนเริ่มเซิร์ฟเวอร์; ฐานข้อมูลต้องเปิด extension `vector`
-- **ข้อจำกัดที่ต้องรู้ก่อนขึ้น production จริง:** `MemorySaver` (checkpointer), `InMemoryStore` (preferences) และ rate limiter อยู่ในหน่วยความจำ → รีสตาร์ทแล้วหาย/รันได้ instance เดียว ต้องเปลี่ยนเป็น Postgres checkpointer / Redis ก่อนขยาย
+- **ข้อจำกัดที่ต้องรู้ก่อนขึ้น production จริง:** ประวัติแชท (checkpointer) เก็บใน Postgres แล้ว (schema `langgraph`, รีสตาร์ทแล้วไม่หาย; ตั้ง `CHECKPOINTER=memory` ถ้าอยากเก็บใน RAM) แต่ `InMemoryStore` (preferences), rate limiter และ lock ต่อบทสนทนายังอยู่ในหน่วยความจำ → รีสตาร์ทแล้วหาย/รันได้ instance เดียว ต้องย้ายไป Postgres/Redis ก่อนขยาย
 
 ## 13. Workshop
 
