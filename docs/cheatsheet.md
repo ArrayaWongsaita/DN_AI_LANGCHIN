@@ -232,7 +232,7 @@ git tag -l 'milestone-*'               # 13 milestone
 | HITL | ค้างอนุมัติ = 409 กับข้อความใหม่; stale approval ปิด thread ด้วย reject |
 | SSE (web) | `TextDecoder({stream:true})` กันอักษรไทยแตก; abort = ปุ่มหยุด |
 | Eval | ชุดต้อง *ตก* กับ agent ถดถอย (`regressedRunner`) ไม่ใช่แค่ผ่านกับของดี |
-| ขึ้น prod | `migrate deploy`; MemorySaver/Store/rate limit อยู่ใน RAM = instance เดียว; `NEXT_PUBLIC_*` เปิดเผยในเบราว์เซอร์ |
+| ขึ้น prod | `migrate deploy`; checkpointer อยู่ใน Postgres (`CHECKPOINTER=memory` = RAM) แต่ Store/rate limit/lock อยู่ใน RAM = instance เดียว; `NEXT_PUBLIC_*` เปิดเผยในเบราว์เซอร์ |
 
 ## Docker / PostgreSQL / Gemini setup (Phase 2)
 ```bash

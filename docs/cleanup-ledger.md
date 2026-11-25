@@ -25,13 +25,11 @@ Branch `docs-tokenme-drift`. What was done, how it was verified, and what was de
 | Duplicate `UsageLog` rows on SSE | fixed: stream route records itself, interceptor skips it (`@SelfRecordedUsage`) | `sse.spec.ts` |
 | Two tabs posting to one conversation | fixed: per-conversation in-memory lock → 409 Thai message | `concurrent-chat.spec.ts` |
 | English error strings | fixed for unknown route, broken JSON, 413, and zod default messages | `hardening.spec.ts` |
-| Postgres checkpointer not wired | **not done** — see below | — |
+| Postgres checkpointer not wired | done in the follow-up round (`complete-remaining`) | `checkpointer-persistence.spec.ts` |
 
 Each fix was written test-first; the failing run was observed before the change (for `lib/approval.ts` the first RED was the missing module; the others failed on assertions or on a missing function).
 
-**Postgres checkpointer — not done, on purpose.** `AgentService` still uses `MemorySaver`, so conversation history is lost on restart
-and the per-conversation lock only works for one instance (both limits are already stated in Part 20). Wiring `PostgresSaver` means a
-schema/`setup()` step, shutdown handling, `deleteThread` semantics and DB-backed tests; it is a separate round, not a minor.
+**Postgres checkpointer — done in the follow-up round.** `AgentService` takes the saver from a `CHECKPOINTER` provider: `PostgresSaver` (schema `langgraph`, `setup()` at start, pool closed on shutdown) by default, `CHECKPOINTER=memory` for a DB-less run. The spec starts two app instances in turn and checks that the second reads the first one's messages and that deleting a conversation removes them (RED first: history was empty). The per-conversation lock, preferences store and rate limiter are still in-process.
 
 ## 3. Leftovers
 

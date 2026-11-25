@@ -76,7 +76,7 @@ src/
                    buildRuntimeContext ───────────▶ AgentService ──▶ createAgent
                    { userId, role, locale }             │   ▲            │ middleware: Untrusted · HITL · ExecutionGuard
                                                         │   │ context    ▼
-                                      MemorySaver ◀─────┘   └──── Tools ──▶ TasksService ──▶ Repository ──▶ PostgreSQL
+                                      PostgresSaver ◀───┘   └──── Tools ──▶ TasksService ──▶ Repository ──▶ PostgreSQL
                                    (thread = user:<id>:conv:<id>)  (userId มาจาก context เท่านั้น, where userId=… ทุก query)
                                                         │
                                   interrupt ──▶ Approval(pending→resolving→decided|stale) ──▶ POST …/approvals/:id
@@ -140,7 +140,7 @@ const config = { configurable: { thread_id: ownedThreadId(ctx.userId, conversati
 ```
 GET /conversations/:id/messages → ["human","ai","tool","ai"]  (ai รอบแรกมี toolCalls: createTask)
 ```
-> ข้อจำกัดที่ต้องบอกตรงๆ: checkpointer เป็น `MemorySaver` (ในหน่วยความจำ) — รีสตาร์ทเซิร์ฟเวอร์แล้วประวัติและคำขออนุมัติที่ค้างหาย เปลี่ยนเป็น Postgres checkpointer (Part 12) ได้โดยไม่แตะส่วนอื่น
+> checkpointer เป็น `PostgresSaver` (schema `langgraph` ในฐานข้อมูลเดียวกัน, `setup()` ตอนเริ่ม, ปิด pool ตอน shutdown) — รีสตาร์ทแล้วประวัติไม่หาย (spec `checkpointer-persistence`); ตั้ง `CHECKPOINTER=memory` เพื่อใช้ `MemorySaver` ในเครื่องที่ไม่มี DB · ที่ยังอยู่ใน RAM: preferences store, rate limiter, lock ต่อบทสนทนา
 
 ### 19-10 SSE Streaming — `part-19-10`
 `POST /conversations/:id/chat/stream` ตรวจสิทธิ์ **ก่อน** เริ่มสตรีม (ผิด → 404/401 ปกติ) แล้วตอบ `text/event-stream` ใช้ `agent.stream({ streamMode: ["messages","updates"], signal })` และ `res.on("close")` → `abort()` เมื่อ client ตัดสาย งานจะหยุด (spec: ตัดสายหลัง event แรก → model ถูกเรียกไม่เกิน 1 รอบถัดไป ทั้งที่สคริปต์ยาว 7)
