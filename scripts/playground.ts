@@ -20,7 +20,7 @@ if (!arg) {
 
 try {
   const { file } = resolveExample(arg);
-  const args = [];
+  const args = [`--import=${join(DEFAULT_EXAMPLES_ROOT, "..", "scripts", "friendly-errors.ts")}`];
   const envFile = join(DEFAULT_EXAMPLES_ROOT, "..", ".env");
   if (existsSync(envFile)) args.push(`--env-file=${envFile}`);
   const result = spawnSync("pnpm", ["exec", "tsx", ...args, file], { stdio: "inherit" });
