@@ -50,3 +50,9 @@ src/
 
 **ข้อจำกัดที่ต้องรู้:** checkpointer เป็น `MemorySaver` (ในหน่วยความจำ — รีสตาร์ทแล้วประวัติ/คำขออนุมัติที่ค้างหาย; Part 19 ต่อไปจะเปลี่ยนเป็น Postgres) · token อายุ 15 นาที ยังไม่มี refresh token
 `bash scripts/smoke.sh` = ทดสอบจริงกับ model (ต้องมี key และ DB)
+| 19-12 | MCP server (stdio, read-only) | `mcp/task-mcp-server.ts` | `part-19-12` |
+| 19-13 | MCP client adapter + untrusted data | `mcp/mcp-tools.ts`, `ai/untrusted.middleware.ts` | `part-19-13` |
+| 19-14 | Rate limit + error mapping | `common/rate-limit*.ts`, `common/public-error.ts`, `common/http-exception.filter.ts` | `part-19-14` |
+| 19-15 | Usage logging | `usage/` | `part-19-15` |
+
+env เพิ่ม: `AI_PROVIDER` · `MCP_ENABLED=true` (เปิด MCP tools) · `RATE_LIMIT_PER_MIN` (ค่าเริ่มต้น 20)

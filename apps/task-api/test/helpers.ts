@@ -36,11 +36,12 @@ import { createScriptedChatModel } from "../src/shared/scripted-model.js";
 export const call = (id: string, name: string, args: Record<string, unknown> = {}) =>
   new AIMessage({ content: "", tool_calls: [{ id, name, args }] });
 
-export async function makeApp() {
-  const mod = await Test.createTestingModule({ imports: [AppModule] })
+export async function makeApp(options: { mcp?: boolean } = {}) {
+  let builder = Test.createTestingModule({ imports: [AppModule] })
     .overrideProvider(CHAT_MODEL)
-    .useFactory({ factory: () => createScriptedChatModel([]) })
-    .compile();
+    .useFactory({ factory: () => createScriptedChatModel([]) });
+  if (options.mcp) builder = builder.overrideProvider(MCP_TOOLS).useValue(createMcpTools);
+  const mod = await builder.compile();
   const app = mod.createNestApplication();
   await app.init();
   const agent = app.get(AgentService);
@@ -62,3 +63,5 @@ export async function registerUser(http: any, label = "u", password = "correct-h
   return { email, password, token: res.body.token as string, id: res.body.user?.id as string, status: res.status, body: res.body };
 }
 export const bearer = (token: string) => ({ Authorization: `Bearer ${token}` });
+
+import { MCP_TOOLS, createMcpTools } from "../src/mcp/mcp-tools.js";

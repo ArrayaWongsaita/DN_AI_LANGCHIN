@@ -201,6 +201,22 @@ const agent = createAgent({ model, tools, contextSchema, checkpointer,
 env: `LANGSMITH_API_KEY` · `LANGSMITH_TRACING=true|false` · `LANGSMITH_PROJECT` · `EVAL_PROVIDER=deepseek` (ตัวอย่าง 18-12/13)
 ข้อควรจำ: free plan จำกัด trace → ปิดเป็นค่าเริ่มต้น; ผลวัดที่ไม่ครบ (429) ห้ามอ่านเป็นผ่าน; Groq free มีโควตา **รายวัน** 200,000 token
 
+## Backend Integration (Part 19 — apps/task-api)
+| เรื่อง | ใช้อย่างไร |
+|---|---|
+| DI ใน Nest (tsx/vitest) | `constructor(@Inject(Service) private readonly s: Service)` — ไม่มี `design:paramtypes` ต้องระบุ token เอง |
+| ฉีด model | `provide: CHAT_MODEL` + `overrideProvider(CHAT_MODEL).useFactory(() => createScriptedChatModel([...]))` |
+| ตัวตน → agent | `JwtGuard` → `buildRuntimeContext(user)` → `agent.invoke(input, { context, configurable: { thread_id } })`; tool อ่าน `runtime.context.userId` |
+| thread id | `user:<userId>:conv:<conversationId>` + `assertThreadOwner` |
+| ประวัติแชท | `agent.getState({ configurable: { thread_id } })` → `values.messages` |
+| SSE | `agent.stream(input, { streamMode: ["messages","updates"], signal })`; `res.on("close", () => abort.abort())`; `event: x\ndata: {json}\n\n` |
+| HITL ฝั่ง server | `result.__interrupt__[0].value.actionRequests` → เก็บตาราง Approval → `new Command({ resume: { decisions } })` |
+| approval idempotent | `updateMany({ where: { id, status: "pending" }, data: { status: "resolving" } })` ผู้ชนะ = `count === 1` |
+| MCP | `new MCPAdapter({ servers: { x: { command, args, env } } })` → `await adapter.listTools()` (ชื่อ `x_tool`) → `await adapter.close()` |
+| MCP server | `new McpServer({name,version})` + `registerTool(name, { description, inputSchema: z.object() }, handler)` + `StdioServerTransport` (`@modelcontextprotocol/server`) |
+| Prisma 7 | `new PrismaClient({ adapter: new PrismaPg({ connectionString }) })`; URL ใน `prisma.config.ts`; CLI ผ่าน `node --env-file` |
+| error → HTTP | provider 429 / `tool_use_failed` → 503, timeout → 504, อื่นๆ → 500 ข้อความไทยกลาง ไม่ส่ง `err.message` |
+
 ## Docker / PostgreSQL / Gemini setup (Phase 2)
 ```bash
 docker compose up -d --wait        # pgvector/pgvector:0.8.0-pg17 พอร์ต 5435 (pnpm db:up)

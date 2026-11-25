@@ -1,8 +1,10 @@
-import { Body, Controller, HttpCode, Inject, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, HttpCode, Inject, Post, UseGuards, UseInterceptors } from "@nestjs/common";
 import { z } from "zod";
 import type { PublicUser } from "../auth/auth.service.js";
 import { CurrentUser } from "../auth/current-user.decorator.js";
 import { JwtGuard } from "../auth/jwt.guard.js";
+import { RateLimitGuard } from "../common/rate-limit.guard.js";
+import { UsageInterceptor } from "../usage/usage.interceptor.js";
 import { parseBody } from "../common/zod.js";
 import { AgentService, THREAD_ID_PATTERN } from "./agent.service.js";
 import { buildRuntimeContext } from "./runtime-context.js";
@@ -14,7 +16,8 @@ const ChatBody = z.object({
 
 /** `POST /chat` แบบง่าย (ไม่ผูกกับตาราง conversation) — บทสนทนาจริงใช้ `/conversations/:id/chat` */
 @Controller("chat")
-@UseGuards(JwtGuard)
+@UseGuards(JwtGuard, RateLimitGuard)
+@UseInterceptors(UsageInterceptor)
 export class ChatController {
   constructor(@Inject(AgentService) private readonly agent: AgentService) {}
 

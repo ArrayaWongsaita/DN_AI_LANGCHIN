@@ -2,12 +2,15 @@ import type { BaseChatModel } from "@langchain/core/language_models/chat_models"
 import { isAIMessage, type BaseMessage } from "@langchain/core/messages";
 import { Command, MemorySaver } from "@langchain/langgraph";
 import { Inject, Injectable } from "@nestjs/common";
+import type { StructuredToolInterface } from "@langchain/core/tools";
 import { createAgent } from "langchain";
+import { MCP_TOOLS, type McpToolsFactory } from "../mcp/mcp-tools.js";
 import { retryAsync } from "../shared/retry.js";
 import { messageText } from "../shared/text.js";
 import { TasksService } from "../tasks/tasks.service.js";
 import { createApprovalMiddleware, type ApprovalDecision } from "./approval.middleware.js";
 import { CHAT_MODEL } from "./model.provider.js";
+import { UNTRUSTED_RULE, createUntrustedResultMiddleware } from "./untrusted.middleware.js";
 import { runtimeContextSchema, type RuntimeContext } from "./runtime-context.js";
 import { createTaskTools } from "./task-tools.js";
 import { assertThreadOwner, threadIdFor } from "./thread-access.js";
@@ -23,8 +26,13 @@ export interface ToolCallInfo {
 export interface PendingAction extends ToolCallInfo {
   description?: string;
 }
+export interface Usage {
+  inputTokens: number;
+  outputTokens: number;
+}
 export interface AgentRunResult {
   reply: string;
+  usage: Usage;
   toolCalls: ToolCallInfo[];
   /** มีค่า = agent หยุดรออนุมัติ (ยังไม่ได้รัน tool เหล่านี้) */
   interrupt?: { actions: PendingAction[] };
@@ -35,7 +43,7 @@ export type AgentEvent =
   | { type: "tool_start"; id: string; name: string; args: Record<string, unknown> }
   | { type: "tool_end"; id: string; name: string; ok: boolean; content: string }
   | { type: "interrupt"; actions: PendingAction[] }
-  | { type: "done"; reply: string };
+  | { type: "done"; reply: string; usage: Usage };
 
 export interface ChatMessageView {
   role: "human" | "ai" | "tool";
@@ -51,6 +59,17 @@ export function ownedThreadId(userId: string, conversationId: string): string {
   return id;
 }
 
+function sumUsage(messages: BaseMessage[]): Usage {
+  let inputTokens = 0;
+  let outputTokens = 0;
+  for (const m of messages) {
+    if (!isAIMessage(m)) continue;
+    inputTokens += m.usage_metadata?.input_tokens ?? 0;
+    outputTokens += m.usage_metadata?.output_tokens ?? 0;
+  }
+  return { inputTokens, outputTokens };
+}
+
 @Injectable()
 export class AgentService {
   private readonly checkpointer = new MemorySaver();
@@ -58,16 +77,32 @@ export class AgentService {
   constructor(
     @Inject(CHAT_MODEL) private model: BaseChatModel,
     @Inject(TasksService) private readonly tasks: TasksService,
+    @Inject(MCP_TOOLS) private readonly mcp: McpToolsFactory | null,
   ) {}
 
-  private build() {
+  /** ตัวเลือกของ retryAsync (เทสต์ตั้ง delay ให้สั้นได้) */
+  retryOptions: { attempts?: number; delayMs?: number } = {};
+
+  /** โหลด MCP tools ของผู้ใช้ (ถ้าเปิดไว้) รัน fn แล้วปิดการเชื่อมต่อเสมอ */
+  private async withAgent<T>(ctx: RuntimeContext, fn: (agent: ReturnType<AgentService["build"]>) => Promise<T>): Promise<T> {
+    const toolset = this.mcp ? await this.mcp(ctx.userId) : null;
+    try {
+      return await fn(this.build(toolset?.tools ?? []));
+    } finally {
+      await toolset?.close().catch(() => undefined);
+    }
+  }
+
+  private build(extraTools: StructuredToolInterface[] = []) {
     const today = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Bangkok" });
     return createAgent({
       model: this.model,
-      tools: createTaskTools(this.tasks),
+      tools: [...createTaskTools(this.tasks), ...extraTools],
       contextSchema: runtimeContextSchema,
       checkpointer: this.checkpointer,
-      middleware: createApprovalMiddleware({
+      middleware: [
+        ...(extraTools.length ? [createUntrustedResultMiddleware((n) => extraTools.some((t) => t.name === n))] : []),
+        ...createApprovalMiddleware({
         requireFor: APPROVAL_TOOLS,
         // ตรวจซ้ำตอนรันจริง: งานต้องยังมีอยู่และเป็นของผู้ใช้ใน context (ไม่ใช่ที่ model อ้าง)
         recheck: async ({ args }, context) => {
@@ -75,7 +110,8 @@ export class AgentService {
           return this.tasks.get(context.userId, args.id).then(() => true, () => false);
         },
       }),
-      systemPrompt: `คุณคือผู้ช่วยจัดการงานของผู้ใช้ ตอบเป็นภาษาไทยสั้นกระชับ วันนี้คือ ${today} (เขตเวลา Asia/Bangkok) ใช้ tool เพื่อดู/สร้าง/แก้/ลบงานเท่านั้น ห้ามอ้างว่าทำสิ่งที่ไม่ได้เรียก tool เมื่อผู้ใช้สั่งลบให้เรียก deleteTask ทันที (ถ้ายังไม่รู้ id ให้เรียก getTasks ก่อน) ระบบจะขออนุมัติจากผู้ใช้เองจึงไม่ต้องถามยืนยันในแชท และถ้า tool ล้มเหลวให้บอกตามจริง`,
+      ],
+      systemPrompt: `คุณคือผู้ช่วยจัดการงานของผู้ใช้ ตอบเป็นภาษาไทยสั้นกระชับ วันนี้คือ ${today} (เขตเวลา Asia/Bangkok) ใช้ tool เพื่อดู/สร้าง/แก้/ลบงานเท่านั้น ห้ามอ้างว่าทำสิ่งที่ไม่ได้เรียก tool เมื่อผู้ใช้สั่งลบให้เรียก deleteTask ทันที (ถ้ายังไม่รู้ id ให้เรียก getTasks ก่อน) ระบบจะขออนุมัติจากผู้ใช้เองจึงไม่ต้องถามยืนยันในแชท และถ้า tool ล้มเหลวให้บอกตามจริง ${UNTRUSTED_RULE}`,
     });
   }
 
@@ -89,6 +125,7 @@ export class AgentService {
     const turn = result.messages.slice(lastHuman + 1); // เฉพาะรอบนี้ ไม่รวมประวัติของ thread
     return {
       reply: actions ? "" : messageText(result.messages.at(-1)!).trim(),
+      usage: sumUsage(turn),
       toolCalls: turn.filter(isAIMessage).flatMap((m) => (m.tool_calls ?? []).map((c) => ({ name: c.name, args: c.args as Record<string, unknown> }))),
       ...(actions ? { interrupt: { actions: actions.map((a) => ({ name: a.name, args: a.args, description: a.description })) } } : {}),
     };
@@ -96,14 +133,18 @@ export class AgentService {
 
   async run(input: { ctx: RuntimeContext; conversationId: string; message: string }): Promise<AgentRunResult> {
     const config = this.config(input.ctx, input.conversationId);
-    const result = await retryAsync(() => this.build().invoke({ messages: [{ role: "user", content: input.message }] }, config));
+    const result = await this.withAgent(input.ctx, (agent) =>
+      retryAsync(() => agent.invoke({ messages: [{ role: "user", content: input.message }] }, config), this.retryOptions),
+    );
     return this.toResult(result as never);
   }
 
   /** ต่อจากจุดที่หยุดรออนุมัติ — `decisions` เรียงตาม actions ที่ถูกขอ */
   async resume(input: { ctx: RuntimeContext; conversationId: string; decisions: ApprovalDecision[] }): Promise<AgentRunResult> {
     const config = this.config(input.ctx, input.conversationId);
-    const result = await retryAsync(() => this.build().invoke(new Command({ resume: { decisions: input.decisions } }), config));
+    const result = await this.withAgent(input.ctx, (agent) =>
+      retryAsync(() => agent.invoke(new Command({ resume: { decisions: input.decisions } }), config), this.retryOptions),
+    );
     return this.toResult(result as never);
   }
 
@@ -113,9 +154,12 @@ export class AgentService {
    */
   async *stream(input: { ctx: RuntimeContext; conversationId: string; message: string; signal?: AbortSignal }): AsyncGenerator<AgentEvent> {
     const config = { ...this.config(input.ctx, input.conversationId, input.signal), streamMode: ["messages", "updates"] as ("messages" | "updates")[] };
-    const iter = (await this.build().stream({ messages: [{ role: "user", content: input.message }] }, config)) as unknown as AsyncIterable<[string, unknown]>;
+    const toolset = this.mcp ? await this.mcp(input.ctx.userId) : null;
+    try {
+    const iter = (await this.build(toolset?.tools ?? []).stream({ messages: [{ role: "user", content: input.message }] }, config)) as unknown as AsyncIterable<[string, unknown]>;
     let streamedThisStep = "";
     let reply = "";
+    const turnMessages: BaseMessage[] = [];
     for await (const [mode, data] of iter) {
       if (input.signal?.aborted) return;
       if (mode === "messages") {
@@ -137,6 +181,7 @@ export class AgentService {
         const messages = ((update as { messages?: BaseMessage[] } | null)?.messages ?? []) as BaseMessage[];
         for (const m of messages) {
           if (isAIMessage(m)) {
+            turnMessages.push(m);
             const text = messageText(m);
             if (text && !streamedThisStep) yield { type: "token", text }; // provider ที่ไม่สตรีม: ส่งทั้งก้อนเป็น token เดียว
             streamedThisStep = "";
@@ -149,7 +194,10 @@ export class AgentService {
         }
       }
     }
-    yield { type: "done", reply };
+    yield { type: "done", reply, usage: sumUsage(turnMessages) };
+    } finally {
+      await toolset?.close().catch(() => undefined);
+    }
   }
 
   /** ประวัติบทสนทนาจาก checkpointer (ผู้เรียกต้องตรวจเจ้าของ conversation ก่อน) */

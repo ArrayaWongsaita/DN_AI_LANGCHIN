@@ -47,7 +47,7 @@ pnpm play 04-01    # เหมือนกัน
 | 4 | 13–16 | Documents, Embeddings, Vector Stores, RAG | Phase 2 ✅ (Part 13–16) |
 | 5 | 17 | Agent Middleware & Human-in-the-Loop | ✅ |
 | 5 | 18 | Testing, Debugging & Evaluation | ✅ |
-| 5 | 19 | Backend Integration (NestJS) | Phase 3 |
+| 5 | 19 | Backend Integration (NestJS) | ✅ |
 | 6 | 20 | Capstone: AI Personal Task Manager | Phase 3 |
 
 > หมายเหตุ: ทดสอบบน macOS/Linux เท่านั้น — `pnpm play` ยังไม่รองรับ Windows (ใช้ WSL)
@@ -66,6 +66,7 @@ pnpm db:down             # หยุด (ข้อมูลอยู่ใน vo
 
 - `LANGSMITH_API_KEY` (free plan พอ) ใช้ใน Part 18 — tracing ปิดเป็นค่าเริ่มต้น (`LANGSMITH_TRACING=false`) และเปิดเฉพาะตัวอย่างที่ต้องการ เพราะ free plan มี quota จำกัด
 - `pnpm test` ไม่ส่ง trace เลย
+- Part 19–20 ใช้ `apps/task-api` (NestJS + Prisma): ตั้ง `TASK_API_DATABASE_URL`, `JWT_SECRET` ใน `.env` แล้ว `pnpm db:up && pnpm --filter task-api db:create && pnpm --filter task-api migrate` ดู [`apps/task-api/README.md`](apps/task-api/README.md)
 
 ## คำสั่งสำหรับ repo
 

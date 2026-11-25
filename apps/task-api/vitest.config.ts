@@ -12,6 +12,7 @@ export default defineConfig({
     include: ["test/**/*.spec.ts"],
     testTimeout: 30_000,
     fileParallelism: false, // spec ใช้ฐานข้อมูลร่วมกัน รันทีละไฟล์
-    env: { LANGSMITH_TRACING: "false" },
+    // เทสต์ส่วนใหญ่ยิงคำขอถี่ จึงผ่อนเพดาน rate limit (production.spec.ts ตั้งกลับเป็น 20 เพื่อทดสอบเพดานจริง)
+    env: { LANGSMITH_TRACING: "false", RATE_LIMIT_PER_MIN: "1000" },
   },
 });
